@@ -9,9 +9,11 @@ CultureInfo.DefaultThreadCurrentCulture = new CultureInfo(CultureInfo.CurrentCul
     NumberFormat = new NumberFormatInfo()
 };
 
-var appSettings = new AppSettings()
+var appSettings = new AppSettings
 {
-
+    ApiKey = string.Empty,
+    Latitude = 0,
+    Longitude = 0
 };
 
 var s = new AstroApiService(appSettings);
