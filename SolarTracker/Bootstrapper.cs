@@ -1,4 +1,5 @@
-﻿using aemarcoCommons.ToolboxAppOptions;
+﻿using aemarcoCommons.Toolbox;
+using aemarcoCommons.ToolboxAppOptions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,11 +18,13 @@ public static class Bootstrapper
 
         });
 
-        //sc.SetupToolbox();
+        sc.SetupToolbox();
 
         sc.AddHostedService<MainService>();
         sc.AddSingleton<TargetTrackerService>();
-        sc.AddTransient<AstroApiService>();
+
+
+        sc.AddHttpClient<AstroApiClient>();
 
         // Add services to the container.
         sc.AddControllers();

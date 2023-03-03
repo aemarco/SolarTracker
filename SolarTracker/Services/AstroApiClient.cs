@@ -5,29 +5,31 @@ using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace SolarTracker.Services;
-public class AstroApiService
+public class AstroApiClient
 {
     //https://github.com/IPGeolocation/ip-geolocation-api-dotnet-sdk
 
+    private readonly HttpClient _httpClient;
     private readonly AppSettings _settings;
-    public AstroApiService(
+
+    public AstroApiClient(
+        HttpClient httpClient,
         AppSettings settings)
     {
+        _httpClient = httpClient;
         _settings = settings;
+
+        _httpClient.BaseAddress = new Uri("https://api.ipgeolocation.io");
     }
 
 
-    public async Task<SunInfo> GetSunInfo()
+    public async Task<SunInfo> GetSunInfo(CancellationToken token)
     {
-        var client = new HttpClient
-        {
-            BaseAddress = new Uri("https://api.ipgeolocation.io")
-        };
         var query = $"/astronomy?apiKey={_settings.ApiKey}&lat={_settings.Latitude}&long={_settings.Longitude}";
-        var resp = await client.GetAsync(query);
+        var resp = await _httpClient.GetAsync(query, token);
         resp.EnsureSuccessStatusCode();
 
-        var ar = await resp.Content.ReadAsAsync<AstroResponse>();
+        var ar = await resp.Content.ReadAsAsync<AstroResponse>(token);
         var result = new SunInfo
         {
             Timestamp = DateOnly.Parse(ar.CurrentDate).ToDateTime(TimeOnly.Parse(ar.CurrentTime)),

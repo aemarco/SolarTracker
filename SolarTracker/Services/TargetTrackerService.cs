@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 
 namespace SolarTracker.Services;
@@ -7,21 +7,22 @@ public class TargetTrackerService
 {
 
 
-    private readonly AstroApiService _astroApiService;
+    private readonly AstroApiClient _astroApiClient;
+    private readonly ILogger<TargetTrackerService> _logger;
+
     public TargetTrackerService(
-        AstroApiService astroApiService)
+        AstroApiClient astroApiClient,
+        ILogger<TargetTrackerService> logger)
     {
-        _astroApiService = astroApiService;
+        _astroApiClient = astroApiClient;
+        _logger = logger;
     }
 
 
     public async Task UpdateTarget(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var info = await _astroApiService.GetSunInfo();
-
-        Debug.WriteLine(info);
-
-
+        var info = await _astroApiClient.GetSunInfo(cancellationToken);
+        _logger.LogDebug("Got new sun info {@sunInfo}", info);
     }
 }

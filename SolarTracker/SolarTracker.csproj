@@ -7,9 +7,9 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
 		<!-- ReSharper disable once VulnerablePackage -->
-		<PackageReference Include="aemarcoToolbox" Version="1.1.9" />
+		<PackageReference Include="aemarcoToolbox" Version="1.1.10" />
 		<PackageReference Include="IpGeolocation.IpGeolocation" Version="1.0.10" />
 		
 	</ItemGroup>
