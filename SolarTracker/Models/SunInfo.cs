@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace SolarTracker.Models;
+﻿namespace SolarTracker.Models;
 public record SunInfo
 {
     public DateTime Timestamp { get; init; }

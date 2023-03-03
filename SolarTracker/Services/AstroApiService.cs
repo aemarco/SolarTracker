@@ -1,7 +1,6 @@
 ﻿using Newtonsoft.Json;
 using SolarTracker.Configuration;
 using SolarTracker.Models;
-using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 
