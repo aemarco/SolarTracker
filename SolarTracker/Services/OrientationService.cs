@@ -1,29 +1,27 @@
 ﻿namespace SolarTracker.Services;
 
-public class TargetTrackerService
+public class OrientationService : IOrientationProvider
 {
 
-    private readonly AstroApiClient _astroApiClient;
-    private readonly AppSettings _appSettings;
-    private readonly ILogger<TargetTrackerService> _logger;
+    private readonly ISunInfoProvider _sunInfoProvider;
+    private readonly DeviceSettings _deviceSettings;
+    private readonly ILogger<OrientationService> _logger;
 
-    public TargetTrackerService(
-        AstroApiClient astroApiClient,
-        AppSettings appSettings,
-        ILogger<TargetTrackerService> logger)
+    public OrientationService(
+        ISunInfoProvider sunInfoProvider,
+        DeviceSettings deviceSettings,
+        ILogger<OrientationService> logger)
     {
-        _astroApiClient = astroApiClient;
-        _appSettings = appSettings;
+        _sunInfoProvider = sunInfoProvider;
+        _deviceSettings = deviceSettings;
         _logger = logger;
     }
 
-
     public async Task<Orientation> GetTargetOrientation(CancellationToken cancellationToken)
     {
-        var sunInfo = await _astroApiClient.GetSunInfo(cancellationToken);
-        _logger.LogDebug("Got new sun info {@sunInfo}", sunInfo);
-
+        var sunInfo = await _sunInfoProvider.GetSunInfo(_deviceSettings.Latitude, _deviceSettings.Longitude, cancellationToken);
         var result = CalculateTargetOrientation(sunInfo);
+        _logger.LogInformation("Got new orientation target {@target}", result);
         return result;
     }
 
@@ -41,13 +39,13 @@ public class TargetTrackerService
         if (time < sunInfo.Sunrise || //before driving range, no sun
             time > sunInfo.Sunset) //after driving range, no sun
         {
-            result = new Orientation(_appSettings.MinAzimuth, _appSettings.MinAltitude);
+            result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude);
         }
         else
         {//sun, so clamp in our range
             result = new Orientation(
-                Math.Clamp(sunInfo.Azimuth, _appSettings.MinAzimuth, _appSettings.MaxAzimuth),
-                Math.Clamp(sunInfo.Altitude, _appSettings.MinAltitude, _appSettings.MaxAltitude));
+                Math.Clamp(sunInfo.Azimuth, _deviceSettings.MinAzimuth, _deviceSettings.MaxAzimuth),
+                Math.Clamp(sunInfo.Altitude, _deviceSettings.MinAltitude, _deviceSettings.MaxAltitude));
         }
         return result;
     }

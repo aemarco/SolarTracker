@@ -18,8 +18,4 @@ public class ConfigController : ControllerBase
     {
         return _appSettings;
     }
-
-
-
-
 }

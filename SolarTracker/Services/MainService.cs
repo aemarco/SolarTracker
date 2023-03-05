@@ -1,19 +1,19 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 
 namespace SolarTracker.Services;
 
 public class MainService : IHostedService
 {
-    private readonly IServiceProvider _serviceProvider;
+
+    private readonly AutoService _autoService;
     private readonly ILogger<MainService> _logger;
 
     private readonly CancellationTokenSource _cts = new();
     public MainService(
-        IServiceProvider serviceProvider,
+        AutoService autoService,
         ILogger<MainService> logger)
     {
-        _serviceProvider = serviceProvider;
+        _autoService = autoService;
         _logger = logger;
 
         _mainTask = Task.CompletedTask;
@@ -21,11 +21,13 @@ public class MainService : IHostedService
 
     public Task StartAsync(CancellationToken _)
     {
+        _logger.LogInformation("Startup");
         _mainTask = Task.Run(() => MainLoop(_cts.Token), _cts.Token);
         return Task.CompletedTask;
     }
     public async Task StopAsync(CancellationToken abortGraceFull)
     {
+        _logger.LogInformation("Graceful shutdown started");
         _cts.Cancel();
         await Task.WhenAny(
             _mainTask,
@@ -34,37 +36,22 @@ public class MainService : IHostedService
 
 
     private Task _mainTask;
-    private async Task MainLoop(CancellationToken cancellationToken)
+    private async Task MainLoop(CancellationToken token)
     {
-        while (!cancellationToken.IsCancellationRequested)
+        while (!token.IsCancellationRequested)
         {
-            var scope = _serviceProvider.CreateScope();
-            var sp = scope.ServiceProvider;
             try
             {
-                //startup procedure...
-                await Task.Delay(5000, cancellationToken);
-
-                var targetService = sp.GetRequiredService<TargetTrackerService>();
-
-                //update current target position
-                var target = await targetService.GetTargetOrientation(cancellationToken);
-
-
-                _logger.LogDebug("Got new sun target {@target}", target);
-                //trigger positioning service to drive as necessary
+                await _autoService.DoStuff(token)
+                    .ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
-                //cancel means anyway, that we fall out of loop...
+                //on our token we fall out of loop anyway, otherwise we continue.
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Something went wrong....");
-            }
-            finally
-            {
-                scope.Dispose();
             }
         }
     }

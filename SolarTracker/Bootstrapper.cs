@@ -51,10 +51,14 @@ public static class Bootstrapper
         sc.SetupToolbox();
 
         sc.AddHostedService<MainService>();
-        sc.AddSingleton<TargetTrackerService>();
+        sc.AddSingleton<AutoService>();
 
 
-        sc.AddHttpClient<AstroApiClient>();
+
+        sc.AddTransient<IOrientationProvider, OrientationService>();
+        sc.AddHttpClient<ISunInfoProvider, IpGeolocationClient>();
+
+
 
         // Add services to the container.
         sc.AddControllers();

@@ -1,27 +1,41 @@
 ﻿using Newtonsoft.Json;
 
 namespace SolarTracker.Services;
-public class AstroApiClient
+
+/// <summary>
+/// client for https://ipgeolocation.io/
+///
+/// https://github.com/IPGeolocation/ip-geolocation-api-dotnet-sdk
+/// unfortunately does not contain astro stuff
+/// </summary>
+public class IpGeolocationClient : ISunInfoProvider
 {
-    //https://github.com/IPGeolocation/ip-geolocation-api-dotnet-sdk
-
+    private readonly IpGeolocationClientSettings _settings;
     private readonly HttpClient _httpClient;
-    private readonly AppSettings _settings;
-
-    public AstroApiClient(
+    private readonly ILogger<IpGeolocationClient> _logger;
+    public IpGeolocationClient(
+        IpGeolocationClientSettings settings,
         HttpClient httpClient,
-        AppSettings settings)
+        ILogger<IpGeolocationClient> logger)
     {
-        _httpClient = httpClient;
         _settings = settings;
+        _httpClient = httpClient;
+        _logger = logger;
 
         _httpClient.BaseAddress = new Uri("https://api.ipgeolocation.io");
     }
 
 
-    public async Task<SunInfo> GetSunInfo(CancellationToken token)
+    /// <summary>
+    /// delivers a new sun info for given geo coordinates
+    /// </summary>
+    /// <param name="latitude">latitude</param>
+    /// <param name="longitude">longitude</param>
+    /// <param name="token">cancellationToken</param>
+    /// <returns>current sunInfo</returns>
+    public async Task<SunInfo> GetSunInfo(float latitude, float longitude, CancellationToken token)
     {
-        var query = $"/astronomy?apiKey={_settings.ApiKey}&lat={_settings.Latitude}&long={_settings.Longitude}";
+        var query = $"/astronomy?apiKey={_settings.ApiKey}&lat={latitude}&long={longitude}";
         var resp = await _httpClient.GetAsync(query, token);
         resp.EnsureSuccessStatusCode();
 
@@ -29,14 +43,15 @@ public class AstroApiClient
         var result = new SunInfo
         {
             Timestamp = DateOnly.Parse(ar.CurrentDate).ToDateTime(TimeOnly.Parse(ar.CurrentTime)),
-            Latitude = MathF.Round(ar.Location.Latitude, 3),
-            Longitude = MathF.Round(ar.Location.Longitude, 3),
+            Latitude = ar.Location.Latitude,
+            Longitude = ar.Location.Longitude,
 
             Sunrise = TimeOnly.Parse(ar.Sunrise),
             Sunset = TimeOnly.Parse(ar.Sunset),
-            Altitude = MathF.Round(ar.Altitude, 2),
-            Azimuth = MathF.Round(ar.Azimuth, 2)
+            Altitude = ar.Altitude,
+            Azimuth = ar.Azimuth
         };
+        _logger.LogInformation("Got new sun info {@sunInfo}", result);
         return result;
     }
 
