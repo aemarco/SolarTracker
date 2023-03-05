@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Builder;
-using SolarTracker;
 using System.Globalization;
 
 CultureInfo.DefaultThreadCurrentCulture = new CultureInfo(CultureInfo.CurrentCulture.Name)
@@ -7,7 +6,7 @@ CultureInfo.DefaultThreadCurrentCulture = new CultureInfo(CultureInfo.CurrentCul
     NumberFormat = new NumberFormatInfo()
 };
 WebApplication.CreateBuilder(args)
-    .SetupServices()
+    .Setup()
     .Build()
     .ConfigurePipeline()
     .Run();

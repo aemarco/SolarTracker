@@ -1,8 +1,4 @@
 ﻿using Newtonsoft.Json;
-using SolarTracker.Configuration;
-using SolarTracker.Models;
-using System.Net.Http;
-using System.Threading.Tasks;
 
 namespace SolarTracker.Services;
 public class AstroApiClient

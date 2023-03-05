@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 
 namespace SolarTracker.Services;
 
@@ -50,12 +48,11 @@ public class MainService : IHostedService
                 var targetService = sp.GetRequiredService<TargetTrackerService>();
 
                 //update current target position
-                await targetService.UpdateTarget(cancellationToken);
+                var target = await targetService.GetTargetOrientation(cancellationToken);
 
+
+                _logger.LogDebug("Got new sun target {@target}", target);
                 //trigger positioning service to drive as necessary
-
-
-                scope.Dispose();
             }
             catch (OperationCanceledException)
             {
