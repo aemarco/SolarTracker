@@ -6,12 +6,16 @@ public class AutoService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly AppSettings _appSettings;
+    private readonly ILogger<AutoService> _logger;
+
     public AutoService(
         IServiceProvider serviceProvider,
-        AppSettings appSettings)
+        AppSettings appSettings,
+        ILogger<AutoService> logger)
     {
         _serviceProvider = serviceProvider;
         _appSettings = appSettings;
+        _logger = logger;
     }
 
 
@@ -20,7 +24,8 @@ public class AutoService
     {
         if (!_appSettings.Auto)
         {
-            await DoAutoDisabled(token);
+            await DoAutoDisabled(token)
+                .ConfigureAwait(false);
             return;
         }
 
@@ -36,16 +41,20 @@ public class AutoService
         else
         {
             var timeToWait = LastTargetOrientation is null
-                ? _appSettings.AutoInterval
+                ? _appSettings.AutoInterval //on the happy path, that never happens
                 : LastTargetOrientation.ValidUntil - DateTime.Now;
             var source = CancellationTokenSource.CreateLinkedTokenSource(
                 _autoChangeSource.Token,
                 token);
-            await Task.Delay(timeToWait, source.Token);
+            _logger.LogDebug("Wait for {timeSpan} or auto mode disable", timeToWait);
+
+            await Task.Delay(timeToWait, source.Token)
+                .ConfigureAwait(false);
         }
 
         //update current target orientation
-        LastTargetOrientation = await orientation.GetTargetOrientation(token);
+        LastTargetOrientation = await orientation.GetTargetOrientation(token)
+            .ConfigureAwait(false);
 
 
         //trigger positioning service to drive as necessary
@@ -82,7 +91,9 @@ public class AutoService
         var source = CancellationTokenSource.CreateLinkedTokenSource(
             _autoChangeSource.Token,
             token);
-        await Task.Delay(Timeout.Infinite, source.Token);
+        _logger.LogDebug("Wait until auto is enabled again");
+        await Task.Delay(Timeout.Infinite, source.Token)
+            .ConfigureAwait(false);
     }
 
 
