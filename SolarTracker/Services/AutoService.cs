@@ -34,8 +34,15 @@ public class AutoService
             _initial = false;
         }
         else
-            await Task.Delay(_appSettings.AutoInterval, token);
-
+        {
+            var timeToWait = LastTargetOrientation is null
+                ? _appSettings.AutoInterval
+                : LastTargetOrientation.ValidUntil - DateTime.Now;
+            var source = CancellationTokenSource.CreateLinkedTokenSource(
+                _autoChangeSource.Token,
+                token);
+            await Task.Delay(timeToWait, source.Token);
+        }
 
         //update current target orientation
         LastTargetOrientation = await orientation.GetTargetOrientation(token);
@@ -57,22 +64,24 @@ public class AutoService
 
             _appSettings.Auto = value;
 
-            if (!_appSettings.Auto)
-                return;
-            //we just enabled
+            if (_appSettings.Auto)
+            {
+                //we just enabled
+                _initial = true;
+            }
 
-            _initial = true;
-            _disabledSource.Cancel();
-            _disabledSource = new CancellationTokenSource();
+            _autoChangeSource.Cancel();
+            _autoChangeSource = new CancellationTokenSource();
         }
     }
 
-    private CancellationTokenSource _disabledSource = new();
-    private async Task DoAutoDisabled(CancellationToken cancellationToken)
+
+    private CancellationTokenSource _autoChangeSource = new();
+    private async Task DoAutoDisabled(CancellationToken token)
     {
         var source = CancellationTokenSource.CreateLinkedTokenSource(
-            _disabledSource.Token,
-            cancellationToken);
+            _autoChangeSource.Token,
+            token);
         await Task.Delay(Timeout.Infinite, source.Token);
     }
 

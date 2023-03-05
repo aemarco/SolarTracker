@@ -5,15 +5,18 @@ public class OrientationService : IOrientationProvider
 
     private readonly ISunInfoProvider _sunInfoProvider;
     private readonly DeviceSettings _deviceSettings;
+    private readonly AppSettings _appSettings;
     private readonly ILogger<OrientationService> _logger;
 
     public OrientationService(
         ISunInfoProvider sunInfoProvider,
         DeviceSettings deviceSettings,
+        AppSettings appSettings,
         ILogger<OrientationService> logger)
     {
         _sunInfoProvider = sunInfoProvider;
         _deviceSettings = deviceSettings;
+        _appSettings = appSettings;
         _logger = logger;
     }
 
@@ -39,13 +42,17 @@ public class OrientationService : IOrientationProvider
         if (time < sunInfo.Sunrise || //before driving range, no sun
             time > sunInfo.Sunset) //after driving range, no sun
         {
-            result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude);
+            //TODO should be tomorrow sunrise
+            var validUntil = DateOnly.FromDateTime(DateTime.Now.AddDays(1)).ToDateTime(sunInfo.Sunrise);
+            result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude, validUntil);
         }
         else
         {//sun, so clamp in our range
+            var validUntil = DateTime.Now.Add(_appSettings.AutoInterval);
             result = new Orientation(
                 Math.Clamp(sunInfo.Azimuth, _deviceSettings.MinAzimuth, _deviceSettings.MaxAzimuth),
-                Math.Clamp(sunInfo.Altitude, _deviceSettings.MinAltitude, _deviceSettings.MaxAltitude));
+                Math.Clamp(sunInfo.Altitude, _deviceSettings.MinAltitude, _deviceSettings.MaxAltitude),
+                validUntil);
         }
         return result;
     }
