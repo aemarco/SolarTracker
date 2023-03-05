@@ -58,7 +58,7 @@ public static class Bootstrapper
         sc.AddTransient<IOrientationProvider, OrientationService>();
         sc.AddHttpClient<ISunInfoProvider, IpGeolocationClient>();
 
-
+        sc.AddTransient<IoService>();
 
         // Add services to the container.
         sc.AddControllers();
