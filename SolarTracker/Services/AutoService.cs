@@ -31,11 +31,13 @@ public class AutoService
 
         using var scope = _serviceProvider.CreateScope();
         var orientation = scope.ServiceProvider.GetRequiredService<IOrientationProvider>();
-
+        var drive = scope.ServiceProvider.GetRequiredService<DriveService>();
 
         if (_initial)
         {
             //startup procedure...
+            await drive.DoStartupProcedure(token)
+                .ConfigureAwait(false);
             _initial = false;
         }
         else
@@ -43,6 +45,10 @@ public class AutoService
             var timeToWait = LastTargetOrientation is null
                 ? _appSettings.AutoInterval //on the happy path, that never happens
                 : LastTargetOrientation.ValidUntil - DateTime.Now;
+            timeToWait = timeToWait < _appSettings.AutoInterval //wait at least the auto interval
+                ? _appSettings.AutoInterval
+                : timeToWait;
+
             var source = CancellationTokenSource.CreateLinkedTokenSource(
                 _autoChangeSource.Token,
                 token);
@@ -58,7 +64,7 @@ public class AutoService
 
 
         //trigger positioning service to drive as necessary
-
+        CurrentOrientation = await drive.DriveToTarget(CurrentOrientation!, LastTargetOrientation, token);
     }
 
 
@@ -100,5 +106,5 @@ public class AutoService
 
     public Orientation? LastTargetOrientation { get; private set; }
 
-
+    public Orientation? CurrentOrientation { get; private set; }
 }

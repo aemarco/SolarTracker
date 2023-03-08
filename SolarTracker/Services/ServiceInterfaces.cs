@@ -22,3 +22,33 @@ public interface IOrientationProvider
     Task<Orientation> GetTargetOrientation(CancellationToken cancellationToken);
 
 }
+
+public interface IIoService
+{
+
+    /// <summary>
+    /// Move our device
+    /// </summary>
+    /// <param name="direction">direction to move</param>
+    /// <param name="timeToDrive">time to move</param>
+    /// <param name="token">abort</param>
+    /// <returns>a drive result</returns>
+    DriveResult Drive(DriveDirection direction, TimeSpan timeToDrive, CancellationToken token);
+
+    /// <summary>
+    /// currently min azimuth limit
+    /// </summary>
+    bool AzimuthMinLimit { get; }
+    /// <summary>
+    /// currently max azimuth limit
+    /// </summary>
+    bool AzimuthMaxLimit { get; }
+    /// <summary>
+    /// currently min altitude limit
+    /// </summary>
+    bool AltitudeMinLimit { get; }
+    /// <summary>
+    /// currently max altitude limit
+    /// </summary>
+    bool AltitudeMaxLimit { get; }
+}

@@ -7,10 +7,10 @@ namespace SolarTracker.Controller;
 public class DriveController : ControllerBase
 {
     private readonly AutoService _autoService;
-    private readonly IoService _ioService;
+    private readonly IIoService _ioService;
     public DriveController(
         AutoService autoService,
-        IoService ioService)
+        IIoService ioService)
     {
         _autoService = autoService;
         _ioService = ioService;

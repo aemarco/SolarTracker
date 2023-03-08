@@ -52,13 +52,14 @@ public static class Bootstrapper
 
         sc.AddHostedService<MainService>();
         sc.AddSingleton<AutoService>();
-
+        sc.AddSingleton<DriveService>();
 
 
         sc.AddTransient<IOrientationProvider, OrientationService>();
         sc.AddHttpClient<ISunInfoProvider, IpGeolocationClient>();
 
-        sc.AddTransient<IoService>();
+        sc.AddTransient<IIoService, IoService>();
+
 
         // Add services to the container.
         sc.AddControllers();

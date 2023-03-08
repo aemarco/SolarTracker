@@ -3,7 +3,9 @@ using System.Diagnostics;
 
 namespace SolarTracker.Services;
 
-public class IoService
+
+
+public class IoService : IIoService
 {
     private readonly DeviceSettings _deviceSettings;
     private readonly GpioController _controller;
@@ -63,4 +65,67 @@ public class IoService
     {
         _controller.Write(pinNumber, value ? PinValue.High : PinValue.Low);
     }
+}
+
+
+
+
+
+public class FakeIoService : IIoService
+{
+
+    private double _aziDriven = 0;
+    private double _altDriven = 0;
+
+    public DriveResult Drive(
+        DriveDirection direction,
+        TimeSpan timeToDrive,
+        CancellationToken token)
+    {
+        double driven = timeToDrive.TotalSeconds;
+        if (direction is DriveDirection.AzimuthNegative)
+        {
+            _aziDriven -= timeToDrive.TotalSeconds;
+
+            if (_aziDriven <= 0)
+            {
+                driven += _aziDriven;
+                _aziDriven = 0;
+                AzimuthMinLimit = true;
+            }
+            if (_aziDriven < 25)
+                AzimuthMaxLimit = false;
+        }
+        else if (direction is DriveDirection.AzimuthPositive)
+        {
+            _aziDriven += timeToDrive.TotalSeconds;
+
+            if (_aziDriven >= 25)
+            {
+                driven -= _aziDriven - 25;
+                _aziDriven = 25;
+                AzimuthMaxLimit = true;
+            }
+            if (_aziDriven > 0)
+                AzimuthMinLimit = false;
+        }
+
+
+
+
+        return new DriveResult(
+            direction,
+            TimeSpan.FromSeconds(driven + 1),
+            false,
+            token.IsCancellationRequested);
+    }
+
+
+
+
+
+    public bool AzimuthMinLimit { get; private set; }
+    public bool AzimuthMaxLimit { get; private set; }
+    public bool AltitudeMinLimit { get; private set; }
+    public bool AltitudeMaxLimit { get; private set; }
 }
