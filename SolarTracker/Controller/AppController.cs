@@ -15,10 +15,10 @@ public class AppController : ControllerBase
     }
 
     [HttpGet]
-    [Route(nameof(GetLastTargetOrientation))]
-    public Orientation? GetLastTargetOrientation()
+    [Route(nameof(GetOrientation))]
+    public Orientation? GetOrientation()
     {
-        return _autoService.LastTargetOrientation;
+        return _autoService.CurrentOrientation;
     }
 
     [HttpPost]

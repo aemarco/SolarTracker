@@ -19,7 +19,6 @@ public class AutoService
     }
 
 
-    private bool _initial = true;
     public async Task DoStuff(CancellationToken token)
     {
         if (!_appSettings.Auto)
@@ -30,41 +29,31 @@ public class AutoService
         }
 
         using var scope = _serviceProvider.CreateScope();
-        var orientation = scope.ServiceProvider.GetRequiredService<IOrientationProvider>();
         var drive = scope.ServiceProvider.GetRequiredService<DriveService>();
 
-        if (_initial)
+        if (CurrentOrientation is not null)
         {
-            //startup procedure...
-            await drive.DoStartupProcedure(token)
-                .ConfigureAwait(false);
-            _initial = false;
-        }
-        else
-        {
-            var timeToWait = LastTargetOrientation is null
-                ? _appSettings.AutoInterval //on the happy path, that never happens
-                : LastTargetOrientation.ValidUntil - DateTime.Now;
-            timeToWait = timeToWait < _appSettings.AutoInterval //wait at least the auto interval
-                ? _appSettings.AutoInterval
-                : timeToWait;
+            var timeToWait = CurrentOrientation.ValidUntil - DateTime.Now;
+            if (timeToWait > TimeSpan.Zero)
+            {
+                var source = CancellationTokenSource.CreateLinkedTokenSource(
+                    _autoChangeSource.Token,
+                    token);
+                _logger.LogDebug("Wait for {timeSpan} or auto mode disable", timeToWait);
 
-            var source = CancellationTokenSource.CreateLinkedTokenSource(
-                _autoChangeSource.Token,
-                token);
-            _logger.LogDebug("Wait for {timeSpan} or auto mode disable", timeToWait);
-
-            await Task.Delay(timeToWait, source.Token)
-                .ConfigureAwait(false);
+                await Task.Delay(timeToWait, source.Token)
+                    .ConfigureAwait(false);
+            }
         }
 
-        //update current target orientation
-        LastTargetOrientation = await orientation.GetTargetOrientation(token)
+        //get target orientation
+        var orientation = scope.ServiceProvider.GetRequiredService<IOrientationProvider>();
+        var target = await orientation.GetTargetOrientation(token)
             .ConfigureAwait(false);
 
-
         //trigger positioning service to drive as necessary
-        CurrentOrientation = await drive.DriveToTarget(CurrentOrientation!, LastTargetOrientation, token);
+        CurrentOrientation = await drive.DriveToTarget(CurrentOrientation, target, token)
+            .ConfigureAwait(false);
     }
 
 
@@ -78,12 +67,6 @@ public class AutoService
             //changed
 
             _appSettings.Auto = value;
-
-            if (_appSettings.Auto)
-            {
-                //we just enabled
-                _initial = true;
-            }
 
             _autoChangeSource.Cancel();
             _autoChangeSource = new CancellationTokenSource();
@@ -102,9 +85,6 @@ public class AutoService
             .ConfigureAwait(false);
     }
 
-
-
-    public Orientation? LastTargetOrientation { get; private set; }
 
     public Orientation? CurrentOrientation { get; private set; }
 }
