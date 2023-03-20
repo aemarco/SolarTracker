@@ -58,7 +58,7 @@ public static class Bootstrapper
         sc.AddTransient<IOrientationProvider, OrientationService>();
         sc.AddHttpClient<ISunInfoProvider, IpGeolocationClient>();
 
-        if (OperatingSystem.IsWindows())
+        if (OperatingSystem.IsWindows() || true)
             sc.AddTransient<IIoService, FakeIoService>();
         else
             sc.AddTransient<IIoService, IoService>();

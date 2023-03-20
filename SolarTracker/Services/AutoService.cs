@@ -19,15 +19,48 @@ public class AutoService
     }
 
 
+
+    public bool AutoEnabled
+    {
+        get => _appSettings.Auto;
+        set
+        {
+            if (_appSettings.Auto == value)
+                return;
+            //changed
+            _appSettings.Auto = value;
+            _autoChangeSource.Cancel();
+        }
+    }
+
+
+    private CancellationTokenSource _autoChangeSource = new();
     public async Task DoStuff(CancellationToken token)
     {
-        if (!_appSettings.Auto)
-        {
-            await DoAutoDisabled(token)
-                .ConfigureAwait(false);
-            return;
-        }
+        if (_autoChangeSource.IsCancellationRequested)
+            _autoChangeSource = new CancellationTokenSource();
+        var source = CancellationTokenSource.CreateLinkedTokenSource(
+            _autoChangeSource.Token,
+            token);
 
+        if (_appSettings.Auto)
+            await DoAuto(source.Token)
+                .ConfigureAwait(false);
+        else
+            await DoAutoDisabled(source.Token)
+                .ConfigureAwait(false);
+    }
+
+
+    private async Task DoAutoDisabled(CancellationToken token)
+    {
+        _logger.LogDebug("Wait until auto is enabled again");
+        await Task.Delay(Timeout.Infinite, token)
+            .ConfigureAwait(false);
+    }
+
+    private async Task DoAuto(CancellationToken token)
+    {
         using var scope = _serviceProvider.CreateScope();
         var drive = scope.ServiceProvider.GetRequiredService<DriveService>();
 
@@ -36,12 +69,8 @@ public class AutoService
             var timeToWait = CurrentOrientation.ValidUntil - DateTime.Now;
             if (timeToWait > TimeSpan.Zero)
             {
-                var source = CancellationTokenSource.CreateLinkedTokenSource(
-                    _autoChangeSource.Token,
-                    token);
                 _logger.LogDebug("Wait for {timeSpan} or auto mode disable", timeToWait);
-
-                await Task.Delay(timeToWait, source.Token)
+                await Task.Delay(timeToWait, token)
                     .ConfigureAwait(false);
             }
         }
@@ -54,36 +83,10 @@ public class AutoService
         //trigger positioning service to drive as necessary
         CurrentOrientation = await drive.DriveToTarget(CurrentOrientation, target, token)
             .ConfigureAwait(false);
+
+
     }
 
-
-    public bool AutoEnabled
-    {
-        get => _appSettings.Auto;
-        set
-        {
-            if (_appSettings.Auto == value)
-                return;
-            //changed
-
-            _appSettings.Auto = value;
-
-            _autoChangeSource.Cancel();
-            _autoChangeSource = new CancellationTokenSource();
-        }
-    }
-
-
-    private CancellationTokenSource _autoChangeSource = new();
-    private async Task DoAutoDisabled(CancellationToken token)
-    {
-        var source = CancellationTokenSource.CreateLinkedTokenSource(
-            _autoChangeSource.Token,
-            token);
-        _logger.LogDebug("Wait until auto is enabled again");
-        await Task.Delay(Timeout.Infinite, source.Token)
-            .ConfigureAwait(false);
-    }
 
 
     public Orientation? CurrentOrientation { get; private set; }
