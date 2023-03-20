@@ -60,11 +60,16 @@ public class IoService : IIoService
 
     private bool Read(int pinNumber)
     {
-        return _controller.Read(pinNumber) == PinValue.High;
+        _controller.OpenPin(pinNumber, PinMode.Input);
+        var result = _controller.Read(pinNumber) == PinValue.High;
+        _controller.ClosePin(pinNumber);
+        return result;
     }
     private void Write(int pinNumber, bool value)
     {
+        _controller.OpenPin(pinNumber, PinMode.Output);
         _controller.Write(pinNumber, value ? PinValue.High : PinValue.Low);
+        _controller.ClosePin(pinNumber);
     }
 }
 
