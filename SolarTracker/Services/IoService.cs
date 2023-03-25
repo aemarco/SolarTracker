@@ -1,23 +1,55 @@
 ﻿using aemarcoCommons.Extensions.NumberExtensions;
 using System.Device.Gpio;
 using System.Diagnostics;
-
 namespace SolarTracker.Services;
 
+public interface IIoService
+{
 
+    /// <summary>
+    /// Move our device
+    /// </summary>
+    /// <param name="direction">direction to move</param>
+    /// <param name="timeToDrive">time to move</param>
+    /// <param name="token">abort</param>
+    /// <returns>a drive result</returns>
+    Task<DriveResult> Drive(DriveDirection direction, TimeSpan timeToDrive, CancellationToken token);
+
+    /// <summary>
+    /// currently min azimuth limit
+    /// </summary>
+    bool AzimuthMinLimit { get; }
+    /// <summary>
+    /// currently max azimuth limit
+    /// </summary>
+    bool AzimuthMaxLimit { get; }
+    /// <summary>
+    /// currently min altitude limit
+    /// </summary>
+    bool AltitudeMinLimit { get; }
+    /// <summary>
+    /// currently max altitude limit
+    /// </summary>
+    bool AltitudeMaxLimit { get; }
+
+}
 
 public class IoService : IIoService
 {
     private readonly DeviceSettings _deviceSettings;
+    private readonly ILogger<IoService> _logger;
     private readonly GpioController _controller;
     public IoService(
-        DeviceSettings deviceSettings)
+        DeviceSettings deviceSettings,
+        ILogger<IoService> logger)
     {
         _deviceSettings = deviceSettings;
+        _logger = logger;
         _controller = new GpioController();
     }
 
-    public DriveResult Drive(DriveDirection direction, TimeSpan timeToDrive, CancellationToken token)
+    //write
+    public async Task<DriveResult> Drive(DriveDirection direction, TimeSpan timeToDrive, CancellationToken token)
     {
         var pin = direction switch
         {
@@ -35,34 +67,29 @@ public class IoService : IIoService
             DriveDirection.AltitudePositive => () => AltitudeMaxLimit,
             _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null)
         };
-        bool StopFunc() => limitFunc() || token.IsCancellationRequested;
-
 
         var sw = Stopwatch.StartNew();
         Write(pin, true);
-        SpinWait.SpinUntil(StopFunc, timeToDrive);
+        while (
+            !token.IsCancellationRequested &&
+            !limitFunc() &&
+            sw.ElapsedMilliseconds < timeToDrive.TotalMilliseconds)
+        {
+            await Task.Delay(25, CancellationToken.None);
+        }
         Write(pin, false);
         sw.Stop();
 
-        return new DriveResult(
+        await Task.Delay(2500, token);
+
+        var result = new DriveResult(
             direction,
             TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds),
             limitFunc(),
             token.IsCancellationRequested);
-    }
 
-    public bool AzimuthMinLimit => Read(_deviceSettings.MinAzimuthLimitPin);
-    public bool AzimuthMaxLimit => Read(_deviceSettings.MaxAzimuthLimitPin);
-    public bool AltitudeMinLimit => Read(_deviceSettings.MinAltitudeLimitPin);
-    public bool AltitudeMaxLimit => Read(_deviceSettings.MaxAltitudeLimitPin);
+        _logger.LogInformation("Drive success with result: {@result}", result);
 
-
-
-    private bool Read(int pinNumber)
-    {
-        _controller.OpenPin(pinNumber, PinMode.Input);
-        var result = _controller.Read(pinNumber) == PinValue.High;
-        _controller.ClosePin(pinNumber);
         return result;
     }
     private void Write(int pinNumber, bool value)
@@ -71,18 +98,28 @@ public class IoService : IIoService
         _controller.Write(pinNumber, value ? PinValue.High : PinValue.Low);
         _controller.ClosePin(pinNumber);
     }
+
+
+    //read
+    public bool AzimuthMinLimit => Read(_deviceSettings.MinAzimuthLimitPin);
+    public bool AzimuthMaxLimit => Read(_deviceSettings.MaxAzimuthLimitPin);
+    public bool AltitudeMinLimit => Read(_deviceSettings.MinAltitudeLimitPin);
+    public bool AltitudeMaxLimit => Read(_deviceSettings.MaxAltitudeLimitPin);
+
+    private bool Read(int pinNumber)
+    {
+        _controller.OpenPin(pinNumber, PinMode.InputPullDown);
+        var result = _controller.Read(pinNumber) == PinValue.High;
+        _controller.ClosePin(pinNumber);
+        return result;
+    }
+
 }
-
-
-
-
 
 public class FakeIoService : IIoService
 {
 
-
-
-    public DriveResult Drive(
+    public Task<DriveResult> Drive(
         DriveDirection direction,
         TimeSpan timeToDrive,
         CancellationToken token)
@@ -139,13 +176,12 @@ public class FakeIoService : IIoService
 
         }
 
-        return new DriveResult(
+        return Task.FromResult(new DriveResult(
             direction,
             TimeSpan.FromSeconds(driven + 1),
             limit,
-            token.IsCancellationRequested);
+            token.IsCancellationRequested));
     }
-
 
 
     private double _aziDriven = 5;

@@ -6,27 +6,32 @@ namespace SolarTracker.Controller;
 [Route("[controller]")]
 public class AppController : ControllerBase
 {
+    private readonly StateProvider _stateProvider;
+    private readonly ILogger<AppController> _logger;
 
-    private readonly AutoService _autoService;
     public AppController(
-        AutoService autoService)
+        StateProvider stateProvider,
+        ILogger<AppController> logger)
     {
-        _autoService = autoService;
+        _stateProvider = stateProvider;
+        _logger = logger;
     }
+
 
     [HttpGet]
-    [Route(nameof(GetOrientation))]
-    public Orientation? GetOrientation()
+    public StateProvider Get()
     {
-        return _autoService.CurrentOrientation;
+        _logger.LogInformation("AppState now {@appState}", _stateProvider);
+        return _stateProvider;
     }
+
 
     [HttpPost]
     [Route(nameof(ChangeAutoMode))]
     public IActionResult ChangeAutoMode(bool enabled)
     {
-        _autoService.AutoEnabled = enabled;
+        _stateProvider.AutoEnabled = enabled;
+        _logger.LogInformation("AutoEnabled now {enabled}", enabled);
         return Ok();
     }
-
 }

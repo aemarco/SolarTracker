@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using System.Diagnostics;
 
 namespace SolarTracker;
 
@@ -50,16 +51,15 @@ public static class Bootstrapper
 
         sc.SetupToolbox();
 
+        sc.AddSingleton<StateProvider>();
         sc.AddHostedService<MainService>();
-        sc.AddSingleton<AutoService>();
-        sc.AddSingleton<DriveService>();
 
 
+        sc.AddTransient<DriveService>();
         sc.AddTransient<IOrientationProvider, OrientationService>();
         sc.AddHttpClient<ISunInfoProvider, IpGeolocationClient>();
-
-        if (OperatingSystem.IsWindows() || true)
-            sc.AddTransient<IIoService, FakeIoService>();
+        if (OperatingSystem.IsWindows() && Debugger.IsAttached)
+            sc.AddTransient<IIoService, FakeIoService>(); //we fake when developing
         else
             sc.AddTransient<IIoService, IoService>();
 
@@ -71,7 +71,6 @@ public static class Bootstrapper
         sc.AddEndpointsApiExplorer();
         sc.AddSwaggerGen();
 
-
         return builder;
     }
 
@@ -81,7 +80,7 @@ public static class Bootstrapper
     public static WebApplication ConfigurePipeline(this WebApplication app)
     {
 
-        if (app.Environment.IsDevelopment())
+        if (app.Environment.IsDevelopment() || true)
         {
             app.UseSwagger();
             app.UseSwaggerUI();

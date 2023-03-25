@@ -2,6 +2,20 @@
 
 namespace SolarTracker.Services;
 
+public interface ISunInfoProvider
+{
+    /// <summary>
+    /// delivers a new sun info for given geo coordinates
+    /// </summary>
+    /// <param name="latitude">latitude</param>
+    /// <param name="longitude">longitude</param>
+    /// <param name="token">cancellationToken</param>
+    /// <returns>current sunInfo</returns>
+    Task<SunInfo> GetSunInfo(float latitude, float longitude, CancellationToken token);
+}
+
+
+
 /// <summary>
 /// client for https://ipgeolocation.io/
 ///

@@ -1,23 +1,28 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace SolarTracker.Services;
 
 public class MainService : IHostedService
 {
 
-    private readonly AutoService _autoService;
+    private readonly StateProvider _stateProvider;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainService> _logger;
-
     private readonly CancellationTokenSource _cts = new();
     public MainService(
-        AutoService autoService,
+        StateProvider stateProvider,
+        IServiceProvider serviceProvider,
         ILogger<MainService> logger)
     {
-        _autoService = autoService;
+        _stateProvider = stateProvider;
+        _serviceProvider = serviceProvider;
         _logger = logger;
 
+        _stateProvider.AutoEnabledChanged += (_, _) => _autoChangeSource.Cancel();
         _mainTask = Task.CompletedTask;
     }
+
 
     public Task StartAsync(CancellationToken _)
     {
@@ -33,17 +38,27 @@ public class MainService : IHostedService
             _mainTask,
             Task.Delay(Timeout.Infinite, abortGraceFull));
     }
-
-
     private Task _mainTask;
+    private CancellationTokenSource _autoChangeSource = new();
     private async Task MainLoop(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
             try
             {
-                await _autoService.DoStuff(token)
-                    .ConfigureAwait(false);
+
+                if (_autoChangeSource.IsCancellationRequested)
+                    _autoChangeSource = new CancellationTokenSource();
+                var source = CancellationTokenSource.CreateLinkedTokenSource(
+                    _autoChangeSource.Token,
+                    token);
+
+                if (_stateProvider.AutoEnabled)
+                    await DoAuto(source.Token)
+                        .ConfigureAwait(false);
+                else
+                    await DoAutoDisabled(source.Token)
+                        .ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -54,6 +69,42 @@ public class MainService : IHostedService
                 _logger.LogError(ex, "Something went wrong....");
             }
         }
+    }
+
+
+
+
+    private async Task DoAutoDisabled(CancellationToken token)
+    {
+        _logger.LogDebug("Wait until auto is enabled again");
+        await Task.Delay(Timeout.Infinite, token)
+            .ConfigureAwait(false);
+    }
+
+    private async Task DoAuto(CancellationToken token)
+    {
+        if (_stateProvider.CurrentOrientation is not null)
+        {
+            var timeToWait = _stateProvider.CurrentOrientation.ValidUntil - DateTime.Now;
+            if (timeToWait > TimeSpan.Zero)
+            {
+                _logger.LogDebug("Wait for {timeSpan} or auto mode disable", timeToWait);
+                await Task.Delay(timeToWait, token)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        using var scope = _serviceProvider.CreateScope();
+
+        //get target orientation
+        var orientationProvider = scope.ServiceProvider.GetRequiredService<IOrientationProvider>();
+        var targetOrientation = await orientationProvider.GetTargetOrientation(token)
+            .ConfigureAwait(false);
+
+        //trigger positioning service to drive as necessary
+        var drive = scope.ServiceProvider.GetRequiredService<DriveService>();
+        _ = await drive.DriveToTarget(targetOrientation, token)
+            .ConfigureAwait(false);
     }
 
 }

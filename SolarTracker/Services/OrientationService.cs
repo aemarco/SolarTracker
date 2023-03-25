@@ -1,5 +1,16 @@
 ﻿namespace SolarTracker.Services;
 
+public interface IOrientationProvider
+{
+    /// <summary>
+    /// delivers a new target orientation
+    /// </summary>
+    /// <param name="cancellationToken">cancellationToken</param>
+    /// <returns>current target orientation</returns>
+    Task<Orientation> GetTargetOrientation(CancellationToken cancellationToken);
+
+}
+
 public class OrientationService : IOrientationProvider
 {
 
@@ -42,7 +53,7 @@ public class OrientationService : IOrientationProvider
         if (time < sunInfo.Sunrise || //before driving range, no sun
             time > sunInfo.Sunset) //after driving range, no sun
         {
-            //TODO should be tomorrow sunrise
+            //sunrise does only fluctuate 1-2 min per day, so today sunrise is good enough for tomorrow
             var validUntil = DateOnly.FromDateTime(DateTime.Now.AddDays(1)).ToDateTime(sunInfo.Sunrise);
             result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude, validUntil);
         }
