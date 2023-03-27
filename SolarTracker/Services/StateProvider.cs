@@ -29,7 +29,9 @@ public class StateProvider
 
     public float AzimuthDegreePerSecond { get; set; }
     public float AzimuthWasteTime { get; set; }
-    public float AltitudeDegreePerSecond { get; set; }
-    public float AltitudeWasteTime { get; set; }
+    public float AltitudePosDegreePerSecond { get; set; }
+    public float AltitudePosWasteTime { get; set; }
+    public float AltitudeNegDegreePerSecond { get; set; }
+    public float AltitudeNegWasteTime { get; set; }
     public Orientation? CurrentOrientation { get; set; }
 }

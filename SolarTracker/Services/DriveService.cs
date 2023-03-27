@@ -36,27 +36,48 @@ public class DriveService
 
 
 
-        //drive up in 1 go (time for angle)
+        //drive in 1 go (time for angle)
         var up = await _ioService.Drive(DriveDirection.AltitudePositive, TimeSpan.FromMinutes(2), token)
             .ConfigureAwait(false);
         if (!_ioService.AltitudeMaxLimit)
             throw new Exception("could not reach max altitude");
-        _stateProvider.AltitudeDegreePerSecond = Convert.ToSingle((_deviceSettings.MaxAltitude - _deviceSettings.MinAltitude)
+        _stateProvider.AltitudePosDegreePerSecond = Convert.ToSingle((_deviceSettings.MaxAltitude - _deviceSettings.MinAltitude)
                                                                   / up.TimeDriven.TotalSeconds);
-        //drive back in n go´s (time for start/stop)
-        var down = new List<DriveResult>();
-        while (!_ioService.AltitudeMinLimit && down.Count < 15)
+        var down = await _ioService.Drive(DriveDirection.AltitudeNegative, TimeSpan.FromMinutes(2), token);
+        if (!_ioService.AltitudeMinLimit)
+            throw new Exception("could not reach min altitude");
+        _stateProvider.AltitudeNegDegreePerSecond = Convert.ToSingle((_deviceSettings.MaxAltitude - _deviceSettings.MinAltitude)
+                                                                     / down.TimeDriven.TotalSeconds);
+
+
+        //drive in n go´s (time for start/stop)
+        var upParts = new List<DriveResult>();
+        while (!_ioService.AltitudeMaxLimit && upParts.Count < 15)
         {
             var timeToDrive = up.TimeDriven.TotalSeconds / 5;
             var driven = await _ioService
+                .Drive(DriveDirection.AltitudePositive, TimeSpan.FromSeconds(timeToDrive), token)
+                .ConfigureAwait(false);
+            upParts.Add(driven);
+        }
+        if (!_ioService.AltitudeMaxLimit)
+            throw new Exception("could not reach max altitude");
+        var upAltWasted = upParts.Sum(x => x.TimeDriven.TotalSeconds) - up.TimeDriven.TotalSeconds;
+        _stateProvider.AltitudePosWasteTime = Convert.ToSingle(upAltWasted / upParts.Count);
+
+        var downParts = new List<DriveResult>();
+        while (!_ioService.AltitudeMinLimit && downParts.Count < 15)
+        {
+            var timeToDrive = down.TimeDriven.TotalSeconds / 5;
+            var driven = await _ioService
                 .Drive(DriveDirection.AltitudeNegative, TimeSpan.FromSeconds(timeToDrive), token)
                 .ConfigureAwait(false);
-            down.Add(driven);
+            downParts.Add(driven);
         }
         if (!_ioService.AltitudeMinLimit)
             throw new Exception("could not reach min altitude");
-        var altWasted = down.Sum(x => x.TimeDriven.TotalSeconds) - up.TimeDriven.TotalSeconds;
-        _stateProvider.AltitudeWasteTime = Convert.ToSingle(altWasted / down.Count);
+        var downAltWasted = downParts.Sum(x => x.TimeDriven.TotalSeconds) - up.TimeDriven.TotalSeconds;
+        _stateProvider.AltitudeNegWasteTime = Convert.ToSingle(downAltWasted / downParts.Count);
 
 
 
@@ -177,8 +198,14 @@ public class DriveService
         }
 
 
-        var time = driveAngle / _stateProvider.AltitudeDegreePerSecond;
-        var timeWithWaste = time + _stateProvider.AltitudeWasteTime;
+        var time = driveAngle / _stateProvider.AltitudePosDegreePerSecond;
+        var waste = direction switch
+        {
+            DriveDirection.AltitudeNegative => _stateProvider.AltitudeNegWasteTime,
+            DriveDirection.AltitudePositive => _stateProvider.AltitudePosWasteTime,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+        var timeWithWaste = time + waste;
 
         _ = await Drive(
             direction,
@@ -215,8 +242,8 @@ public class DriveService
         {
             DriveDirection.AzimuthPositive => (_stateProvider.AzimuthDegreePerSecond, _stateProvider.AzimuthWasteTime),
             DriveDirection.AzimuthNegative => (_stateProvider.AzimuthDegreePerSecond, _stateProvider.AzimuthWasteTime),
-            DriveDirection.AltitudePositive => (_stateProvider.AltitudeDegreePerSecond, _stateProvider.AltitudeWasteTime),
-            DriveDirection.AltitudeNegative => (_stateProvider.AltitudeDegreePerSecond, _stateProvider.AltitudeWasteTime),
+            DriveDirection.AltitudePositive => (_stateProvider.AltitudePosDegreePerSecond, _stateProvider.AltitudePosWasteTime),
+            DriveDirection.AltitudeNegative => (_stateProvider.AltitudeNegDegreePerSecond, _stateProvider.AltitudeNegWasteTime),
             _ => throw new ArgumentOutOfRangeException()
         };
         var degreeDriven = Convert.ToSingle(degreePerSecond * (driven.TimeDriven.TotalSeconds - wasted));
