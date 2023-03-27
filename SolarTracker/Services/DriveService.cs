@@ -21,6 +21,7 @@ namespace SolarTracker.Services
             _ioService = ioService;
         }
 
+
         public async Task<Orientation> DoStartupProcedure(CancellationToken token)
         {
             //maybe drive down
@@ -40,6 +41,8 @@ namespace SolarTracker.Services
                 .ConfigureAwait(false);
             if (!_ioService.AltitudeMaxLimit)
                 throw new Exception("could not reach max altitude");
+            _stateProvider.AltitudeDegreePerSecond = Convert.ToSingle((_deviceSettings.MaxAltitude - _deviceSettings.MinAltitude)
+                                                                      / up.TimeDriven.TotalSeconds);
             //drive back in n go´s (time for start/stop)
             var down = new List<DriveResult>();
             while (!_ioService.AltitudeMinLimit && down.Count < 15)
@@ -54,8 +57,6 @@ namespace SolarTracker.Services
                 throw new Exception("could not reach min altitude");
             var altWasted = down.Sum(x => x.TimeDriven.TotalSeconds) - up.TimeDriven.TotalSeconds;
             _stateProvider.AltitudeWasteTime = Convert.ToSingle(altWasted / down.Count);
-            _stateProvider.AltitudeDegreePerSecond = Convert.ToSingle((_deviceSettings.MaxAltitude - _deviceSettings.MinAltitude)
-                                                                 / up.TimeDriven.TotalSeconds);
 
 
 
@@ -64,6 +65,8 @@ namespace SolarTracker.Services
                 .ConfigureAwait(false);
             if (!_ioService.AzimuthMaxLimit)
                 throw new Exception("could not reach max azimuth");
+            _stateProvider.AzimuthDegreePerSecond = Convert.ToSingle((_deviceSettings.MaxAzimuth - _deviceSettings.MinAzimuth)
+                                                                     / right.TimeDriven.TotalSeconds);
             //drive back in n go´s (time for start/stop)
             var left = new List<DriveResult>();
             while (!_ioService.AzimuthMinLimit && left.Count < 30)
@@ -78,8 +81,6 @@ namespace SolarTracker.Services
                 throw new Exception("could not reach min azimuth");
             var aziWasted = left.Sum(x => x.TimeDriven.TotalSeconds) - right.TimeDriven.TotalSeconds;
             _stateProvider.AzimuthWasteTime = Convert.ToSingle(aziWasted / left.Count);
-            _stateProvider.AzimuthDegreePerSecond = Convert.ToSingle((_deviceSettings.MaxAzimuth - _deviceSettings.MinAzimuth)
-                                                                 / right.TimeDriven.TotalSeconds);
 
             //here we should know how much is the drive integration delay,
             //and how much angle do we cover per time.
@@ -96,95 +97,156 @@ namespace SolarTracker.Services
             return result;
         }
 
-        public async Task<Orientation> DriveToTarget(Orientation target, CancellationToken token)
+        //special rules:
+        //-when we are over or close to limits, we drive up to the limit
+        //-we are saving drive results over the day
+
+        public async Task DriveToTarget(Orientation target, CancellationToken token)
         {
-            var source = _stateProvider.CurrentOrientation ?? await DoStartupProcedure(token);
+            if (_stateProvider.CurrentOrientation is null)
+                await DoStartupProcedure(token);
 
-            var result = await DriveAzimuth(source, target, token);
-            result = await DriveAltitude(result, target, token);
-
-            _stateProvider.CurrentOrientation = result;
-            return result;
-
-            //special rules:
-            //-when we are over or close to limits, we drive up to the limit
-            //-we are saving drive results over the day
+            await DriveAzimuth(target, token);
+            await DriveAltitude(target, token);
         }
 
-
-        private async Task<Orientation> DriveAzimuth(Orientation source, Orientation target, CancellationToken token)
+        private async Task DriveAzimuth(Orientation target, CancellationToken token)
         {
+            if (_stateProvider.CurrentOrientation is null)
+                throw new Exception("Can´t drive when no reference position");
+
             //turn differences in direction and time azimuth
-            var direction = target.Azimuth > source.Azimuth
+            var direction = target.Azimuth > _stateProvider.CurrentOrientation.Azimuth
                 ? DriveDirection.AzimuthPositive
                 : DriveDirection.AzimuthNegative;
             //already in limit
             if (CheckLimit(direction))
             {
-                return source with { ValidUntil = target.ValidUntil };
+                _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation
+                    with
+                { ValidUntil = target.ValidUntil };
+                return;
             }
 
-            var driveAngle = Math.Abs(target.Azimuth - source.Azimuth);
-            if (driveAngle < _appSettings.AzimuthMinAngleForDrive)
+
+            var driveAngle = Math.Abs(target.Azimuth - _stateProvider.CurrentOrientation.Azimuth);
+            if (driveAngle < _appSettings.AzimuthMinAngleForDrive &&
+                target.Azimuth > _deviceSettings.MinAzimuth &&
+                target.Azimuth < _deviceSettings.MaxAzimuth)
             {
-                return source with { ValidUntil = target.ValidUntil };
+                _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation
+                    with
+                { ValidUntil = target.ValidUntil };
+                return;
             }
-
 
             var time = driveAngle / _stateProvider.AzimuthDegreePerSecond;
             var timeWithWaste = time + _stateProvider.AzimuthWasteTime;
-            var driven = await _ioService.Drive(
+
+            _ = await Drive(
                 direction,
                 TimeSpan.FromSeconds(timeWithWaste),
-                token);
-
-
-            var degreeDriven = Convert.ToSingle(_stateProvider.AzimuthDegreePerSecond * (driven.TimeDriven.TotalSeconds - _stateProvider.AzimuthWasteTime));
-            degreeDriven = driven.Direction == DriveDirection.AzimuthPositive ? degreeDriven : degreeDriven * -1;
-            var newAngle = source.Azimuth + degreeDriven;
-            newAngle = Math.Clamp(newAngle, _deviceSettings.MinAzimuth, _deviceSettings.MaxAzimuth);
-
-            var result = new Orientation(newAngle, source.Altitude, target.ValidUntil);
-            return result;
+                token,
+                target.ValidUntil);
         }
 
-        private async Task<Orientation> DriveAltitude(Orientation source, Orientation target, CancellationToken token)
+        private async Task DriveAltitude(Orientation target, CancellationToken token)
         {
+            if (_stateProvider.CurrentOrientation is null)
+                throw new Exception("Can´t drive when no reference position");
+
             //turn differences in direction and time altitude 
-            var direction = target.Altitude > source.Altitude
+            var direction = target.Altitude > _stateProvider.CurrentOrientation.Altitude
                 ? DriveDirection.AltitudePositive
                 : DriveDirection.AltitudeNegative;
             //already in limit
             if (CheckLimit(direction))
             {
-                return source with { ValidUntil = target.ValidUntil };
+                _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation
+                    with
+                { ValidUntil = target.ValidUntil };
+                return;
             }
-            var driveAngle = Math.Abs(target.Altitude - source.Altitude);
+            var driveAngle = Math.Abs(target.Altitude - _stateProvider.CurrentOrientation.Altitude);
             if (driveAngle < _appSettings.AltitudeMinAngleForDrive)
             {
-                return source with { ValidUntil = target.ValidUntil };
+                _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation
+                    with
+                { ValidUntil = target.ValidUntil };
+                return;
             }
 
 
             var time = driveAngle / _stateProvider.AltitudeDegreePerSecond;
             var timeWithWaste = time + _stateProvider.AltitudeWasteTime;
-            var driven = await _ioService.Drive(
+
+            _ = await Drive(
                 direction,
                 TimeSpan.FromSeconds(timeWithWaste),
+                token,
+                target.ValidUntil);
+        }
+
+        public async Task<DriveResult> Drive(
+            DriveDirection direction,
+            TimeSpan timeToDrive,
+            CancellationToken token,
+            DateTime? validUntil = null)
+        {
+            var result = await _ioService.Drive(
+                direction,
+                timeToDrive,
                 token);
 
 
-            var degreeDriven = Convert.ToSingle(_stateProvider.AltitudeDegreePerSecond * (driven.TimeDriven.TotalSeconds - _stateProvider.AltitudeWasteTime));
-            degreeDriven = driven.Direction == DriveDirection.AltitudePositive ? degreeDriven : degreeDriven * -1;
-            var newAngle = source.Altitude + degreeDriven;
-            newAngle = Math.Clamp(newAngle, _deviceSettings.MinAltitude, _deviceSettings.MaxAltitude);
+            HandleDriveResult(
+                result,
+                validUntil ?? DateTime.Now.Add(_appSettings.AutoInterval));
 
-
-            var result = new Orientation(source.Azimuth, newAngle, target.ValidUntil);
             return result;
         }
 
-        private bool CheckLimit(DriveDirection direction)
+        private void HandleDriveResult(DriveResult driven, DateTime validUntil)
+        {
+            if (_stateProvider.CurrentOrientation is null)
+                return;
+
+            var (degreePerSecond, wasted) = driven.Direction switch
+            {
+                DriveDirection.AzimuthPositive => (_stateProvider.AzimuthDegreePerSecond, _stateProvider.AzimuthWasteTime),
+                DriveDirection.AzimuthNegative => (_stateProvider.AzimuthDegreePerSecond, _stateProvider.AzimuthWasteTime),
+                DriveDirection.AltitudePositive => (_stateProvider.AltitudeDegreePerSecond, _stateProvider.AltitudeWasteTime),
+                DriveDirection.AltitudeNegative => (_stateProvider.AltitudeDegreePerSecond, _stateProvider.AltitudeWasteTime),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+            var degreeDriven = Convert.ToSingle(degreePerSecond * (driven.TimeDriven.TotalSeconds - wasted));
+
+            var azi = _stateProvider.CurrentOrientation.Azimuth;
+            azi = (driven.Direction, driven.LimitReached) switch
+            {
+                (DriveDirection.AzimuthPositive, true) => _deviceSettings.MaxAzimuth,
+                (DriveDirection.AzimuthNegative, true) => _deviceSettings.MinAzimuth,
+                (DriveDirection.AzimuthPositive, false) => Math.Clamp(azi + degreeDriven, _deviceSettings.MinAzimuth, _deviceSettings.MaxAzimuth),
+                (DriveDirection.AzimuthNegative, false) => Math.Clamp(azi - degreeDriven, _deviceSettings.MinAzimuth, _deviceSettings.MaxAzimuth),
+                _ => azi
+            };
+            var alt = _stateProvider.CurrentOrientation.Altitude;
+            alt = (driven.Direction, driven.LimitReached) switch
+            {
+                (DriveDirection.AltitudePositive, true) => _deviceSettings.MaxAltitude,
+                (DriveDirection.AltitudeNegative, true) => _deviceSettings.MinAltitude,
+                (DriveDirection.AltitudePositive, false) => Math.Clamp(alt + degreeDriven, _deviceSettings.MinAltitude, _deviceSettings.MaxAltitude),
+                (DriveDirection.AltitudeNegative, false) => Math.Clamp(alt - degreeDriven, _deviceSettings.MinAltitude, _deviceSettings.MaxAltitude),
+                _ => alt
+            };
+
+            _stateProvider.CurrentOrientation = new Orientation(
+                azi,
+                alt,
+                validUntil);
+        }
+
+        public bool CheckLimit(DriveDirection direction)
         {
             var result = direction switch
             {
@@ -198,4 +260,5 @@ namespace SolarTracker.Services
         }
 
     }
+
 }

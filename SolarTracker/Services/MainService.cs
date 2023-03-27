@@ -88,7 +88,7 @@ public class MainService : IHostedService
             var timeToWait = _stateProvider.CurrentOrientation.ValidUntil - DateTime.Now;
             if (timeToWait > TimeSpan.Zero)
             {
-                _logger.LogDebug("Wait for {timeSpan} or auto mode disable", timeToWait);
+                _logger.LogInformation("Wait for {validUntil} ({timeSpan}) or auto mode disable", _stateProvider.CurrentOrientation.ValidUntil, timeToWait);
                 await Task.Delay(timeToWait, token)
                     .ConfigureAwait(false);
             }
@@ -103,7 +103,7 @@ public class MainService : IHostedService
 
         //trigger positioning service to drive as necessary
         var drive = scope.ServiceProvider.GetRequiredService<DriveService>();
-        _ = await drive.DriveToTarget(targetOrientation, token)
+        await drive.DriveToTarget(targetOrientation, token)
             .ConfigureAwait(false);
     }
 

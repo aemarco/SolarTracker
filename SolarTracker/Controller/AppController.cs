@@ -21,7 +21,7 @@ public class AppController : ControllerBase
     [HttpGet]
     public StateProvider Get()
     {
-        _logger.LogInformation("AppState now {@appState}", _stateProvider);
+        _logger.LogDebug("AppState now {@appState}", _stateProvider);
         return _stateProvider;
     }
 
