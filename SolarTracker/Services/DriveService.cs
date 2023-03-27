@@ -43,7 +43,8 @@ public class DriveService
             throw new Exception("could not reach max altitude");
         _stateProvider.AltitudePosDegreePerSecond = Convert.ToSingle((_deviceSettings.MaxAltitude - _deviceSettings.MinAltitude)
                                                                   / up.TimeDriven.TotalSeconds);
-        var down = await _ioService.Drive(DriveDirection.AltitudeNegative, TimeSpan.FromMinutes(2), token);
+        var down = await _ioService.Drive(DriveDirection.AltitudeNegative, TimeSpan.FromMinutes(2), token)
+            .ConfigureAwait(false);
         if (!_ioService.AltitudeMinLimit)
             throw new Exception("could not reach min altitude");
         _stateProvider.AltitudeNegDegreePerSecond = Convert.ToSingle((_deviceSettings.MaxAltitude - _deviceSettings.MinAltitude)
