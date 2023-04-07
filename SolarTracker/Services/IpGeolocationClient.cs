@@ -49,21 +49,25 @@ public class IpGeolocationClient : ISunInfoProvider
     /// <returns>current sunInfo</returns>
     public async Task<SunInfo> GetSunInfo(float latitude, float longitude, CancellationToken token)
     {
+        if (string.IsNullOrWhiteSpace(_settings.ApiKey))
+            throw new Exception("IpGeolocationClient api key not configured");
+
+
         var query = $"/astronomy?apiKey={_settings.ApiKey}&lat={latitude}&long={longitude}";
         var resp = await _httpClient.GetAsync(query, token);
         resp.EnsureSuccessStatusCode();
 
-        var ar = await resp.Content.ReadAsAsync<AstroResponse>(token);
+        var astro = await resp.Content.ReadAsAsync<AstroResponse>(token);
         var result = new SunInfo
         {
-            Timestamp = DateOnly.Parse(ar.CurrentDate).ToDateTime(TimeOnly.Parse(ar.CurrentTime)),
-            Latitude = ar.Location.Latitude,
-            Longitude = ar.Location.Longitude,
+            Timestamp = DateOnly.Parse(astro.CurrentDate).ToDateTime(TimeOnly.Parse(astro.CurrentTime)),
+            Latitude = astro.Location.Latitude,
+            Longitude = astro.Location.Longitude,
 
-            Sunrise = TimeOnly.Parse(ar.Sunrise),
-            Sunset = TimeOnly.Parse(ar.Sunset),
-            Altitude = ar.Altitude,
-            Azimuth = ar.Azimuth
+            Sunrise = TimeOnly.Parse(astro.Sunrise),
+            Sunset = TimeOnly.Parse(astro.Sunset),
+            Altitude = astro.Altitude,
+            Azimuth = astro.Azimuth
         };
         _logger.LogInformation("Got new sun info {@sunInfo}", result);
         return result;

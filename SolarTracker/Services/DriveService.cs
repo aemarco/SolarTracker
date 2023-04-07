@@ -152,7 +152,7 @@ public class DriveService
 
 
         var driveAngle = Math.Abs(target.Azimuth - _stateProvider.CurrentOrientation.Azimuth);
-        if (driveAngle < _appSettings.AzimuthMinAngleForDrive &&
+        if (driveAngle < _deviceSettings.AzimuthMinAngleForDrive &&
             target.Azimuth > _deviceSettings.MinAzimuth &&
             target.Azimuth < _deviceSettings.MaxAzimuth)
         {
@@ -190,7 +190,7 @@ public class DriveService
             return;
         }
         var driveAngle = Math.Abs(target.Altitude - _stateProvider.CurrentOrientation.Altitude);
-        if (driveAngle < _appSettings.AltitudeMinAngleForDrive)
+        if (driveAngle < _deviceSettings.AltitudeMinAngleForDrive)
         {
             _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation
                 with

@@ -5,10 +5,23 @@ namespace SolarTracker.Configuration;
 
 public class AppSettings : SettingsBase
 {
+
+    /// <summary>
+    /// This decides if the app starts with auto mode enabled
+    /// </summary>
     public bool Auto { get; set; }
+    /// <summary>
+    /// Interval, in which the target orientation gets updated
+    /// </summary>
     public TimeSpan AutoInterval { get; set; }
 
-    public double AzimuthMinAngleForDrive { get; set; }
-    public double AltitudeMinAngleForDrive { get; set; }
+    /// <summary>
+    /// So that /swagger is enabled
+    /// </summary>
+    public bool EnableSwaggerUi { get; set; }
+    /// <summary>
+    /// So that we don´t try to read or set any pins where we can´t
+    /// </summary>
+    public bool EnableFakeIo { get; set; }
 
 }
