@@ -1,4 +1,5 @@
-﻿namespace SolarTracker.Models;
+﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
+namespace SolarTracker.Models;
 public record SunInfo
 {
     public DateTime Timestamp { get; init; }
