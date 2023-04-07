@@ -7,6 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SolarTracker", "SolarTracke
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionFiles", "SolutionFiles", "{2550C4D8-8849-4BEA-8980-60BDD47B59A8}"
 	ProjectSection(SolutionItems) = preProject
+		deployToPi.ps1 = deployToPi.ps1
 		Directory.Build.props = Directory.Build.props
 		README.md = README.md
 		version.json = version.json
