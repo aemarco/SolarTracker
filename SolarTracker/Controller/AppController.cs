@@ -19,10 +19,11 @@ public class AppController : ControllerBase
 
 
     [HttpGet]
-    public StateProvider Get()
+    public StateInfo Get()
     {
-        _logger.LogDebug("AppState now {@appState}", _stateProvider);
-        return _stateProvider;
+        var result = new StateInfo(_stateProvider);
+        _logger.LogDebug("AppState now {@appState}", result);
+        return result;
     }
 
 
