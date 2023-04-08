@@ -70,19 +70,19 @@ public class DriveService
         _stateProvider.AzimuthDegreePerSecond = Convert.ToSingle((_deviceSettings.MaxAzimuth - _deviceSettings.MinAzimuth)
                                                                  / right.TimeDriven.TotalSeconds);
         //drive back in n go´s (time for start/stop)
-        var left = new List<DriveResult>();
-        while (!_ioService.AzimuthMinLimit && left.Count < 30)
+        var leftParts = new List<DriveResult>();
+        while (!_ioService.AzimuthMinLimit && leftParts.Count < 30)
         {
             var timeToDrive = right.TimeDriven.TotalSeconds / 10;
             var driven = await _ioService
                 .Drive(DriveDirection.AzimuthNegative, TimeSpan.FromSeconds(timeToDrive), token)
                 .ConfigureAwait(false);
-            left.Add(driven);
+            leftParts.Add(driven);
         }
         if (!_ioService.AzimuthMinLimit)
             throw new Exception("could not reach min azimuth");
-        var aziWasted = left.Sum(x => x.TimeDriven.TotalSeconds) - right.TimeDriven.TotalSeconds;
-        _stateProvider.AzimuthWasteTime = Convert.ToSingle(aziWasted / left.Count);
+        var aziWasted = leftParts.Sum(x => x.TimeDriven.TotalSeconds) - right.TimeDriven.TotalSeconds;
+        _stateProvider.AzimuthWasteTime = Convert.ToSingle(aziWasted / leftParts.Count);
 
         //here we should know how much is the drive integration delay,
         //and how much angle do we cover per time.
