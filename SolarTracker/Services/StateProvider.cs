@@ -33,5 +33,10 @@ public class StateProvider
     public float AltitudePosWasteTime { get; set; }
     public float AltitudeNegDegreePerSecond { get; set; }
     public float AltitudeNegWasteTime { get; set; }
+
+
+
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global
+    public Orientation? LastTargetOrientation { get; set; }
     public Orientation? CurrentOrientation { get; set; }
 }

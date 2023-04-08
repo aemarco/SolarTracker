@@ -33,8 +33,13 @@ public class OrientationService : IOrientationProvider
 
     public async Task<Orientation> GetTargetOrientation(CancellationToken cancellationToken)
     {
-        var sunInfo = await _sunInfoProvider.GetSunInfo(_deviceSettings.Latitude, _deviceSettings.Longitude, cancellationToken);
+        var sunInfo = await _sunInfoProvider.GetSunInfo(
+            _deviceSettings.Latitude,
+            _deviceSettings.Longitude,
+            cancellationToken);
+
         var result = CalculateTargetOrientation(sunInfo);
+
         _logger.LogInformation("Got new orientation target {@target}", result);
         return result;
     }
@@ -43,27 +48,29 @@ public class OrientationService : IOrientationProvider
     {
         //we have following cases for azimuth / altitude
         // - before driving range, no sun  --> min / min
-        // - before driving range          --> min / min (individually)
+        // - before driving range          --> info / info (individually)
         // - driving range                 --> info / info (individually)
-        // - after driving range           --> max / min (individually)
+        // - after driving range           --> info / info (individually)
         // - after driving range, no sun   ---> min / min
 
         Orientation result;
         var time = TimeOnly.FromDateTime(DateTime.Now);
-        if (time < sunInfo.Sunrise || //before driving range, no sun
-            time > sunInfo.Sunset) //after driving range, no sun
+
+        if (time < sunInfo.Sunrise) //before driving range, no sun
+        {
+            var validUntil = DateOnly.FromDateTime(DateTime.Now).ToDateTime(sunInfo.Sunrise);
+            result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude, validUntil);
+        }
+        else if (time >= sunInfo.Sunset) //after driving range, no sun
         {
             //sunrise does only fluctuate 1-2 min per day, so today sunrise is good enough for tomorrow
             var validUntil = DateOnly.FromDateTime(DateTime.Now.AddDays(1)).ToDateTime(sunInfo.Sunrise);
             result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude, validUntil);
         }
-        else
-        {//sun, so clamp in our range
+        else //sun
+        {
             var validUntil = DateTime.Now.Add(_appSettings.AutoInterval);
-            result = new Orientation(
-                Math.Clamp(sunInfo.Azimuth, _deviceSettings.MinAzimuth, _deviceSettings.MaxAzimuth),
-                Math.Clamp(sunInfo.Altitude, _deviceSettings.MinAltitude, _deviceSettings.MaxAltitude),
-                validUntil);
+            result = new Orientation(sunInfo.Azimuth, sunInfo.Altitude, validUntil);
         }
         return result;
     }

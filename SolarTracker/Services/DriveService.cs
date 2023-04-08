@@ -22,6 +22,7 @@ public class DriveService
     }
 
 
+
     public async Task<Orientation> DoStartupProcedure(CancellationToken token)
     {
         //maybe drive down
@@ -119,48 +120,35 @@ public class DriveService
         return result;
     }
 
-    //special rules:
-    //-when we are over or close to limits, we drive up to the limit
-    //-we are saving drive results over the day
+
 
     public async Task DriveToTarget(Orientation target, CancellationToken token)
     {
-        if (_stateProvider.CurrentOrientation is null)
-            await DoStartupProcedure(token);
+        _stateProvider.CurrentOrientation ??= await DoStartupProcedure(token);
 
         await DriveAzimuth(target, token);
         await DriveAltitude(target, token);
-    }
 
+        _stateProvider.LastTargetOrientation = target;
+        _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation with
+        {
+            ValidUntil = target.ValidUntil
+        };
+    }
     private async Task DriveAzimuth(Orientation target, CancellationToken token)
     {
-        if (_stateProvider.CurrentOrientation is null)
-            throw new Exception("Can´t drive when no reference position");
+        _ = _stateProvider.CurrentOrientation ?? throw new Exception("Can´t target drive while no reference position");
 
-        //turn differences in direction and time azimuth
         var direction = target.Azimuth > _stateProvider.CurrentOrientation.Azimuth
             ? DriveDirection.AzimuthPositive
             : DriveDirection.AzimuthNegative;
-        //already in limit
         if (CheckLimit(direction))
-        {
-            _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation
-                with
-            { ValidUntil = target.ValidUntil };
-            return;
-        }
-
+            return; //already in limit
 
         var driveAngle = Math.Abs(target.Azimuth - _stateProvider.CurrentOrientation.Azimuth);
-        if (driveAngle < _deviceSettings.AzimuthMinAngleForDrive &&
-            target.Azimuth > _deviceSettings.MinAzimuth &&
-            target.Azimuth < _deviceSettings.MaxAzimuth)
-        {
-            _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation
-                with
-            { ValidUntil = target.ValidUntil };
-            return;
-        }
+        if (driveAngle < _deviceSettings.AzimuthMinAngleForDrive)
+            return; //less than threshold
+
 
         var time = driveAngle / _stateProvider.AzimuthDegreePerSecond;
         var timeWithWaste = time + _stateProvider.AzimuthWasteTime;
@@ -171,42 +159,28 @@ public class DriveService
             token,
             target.ValidUntil);
     }
-
     private async Task DriveAltitude(Orientation target, CancellationToken token)
     {
-        if (_stateProvider.CurrentOrientation is null)
-            throw new Exception("Can´t drive when no reference position");
+        _ = _stateProvider.CurrentOrientation ?? throw new Exception("Can´t target drive while no reference position");
 
-        //turn differences in direction and time altitude 
         var direction = target.Altitude > _stateProvider.CurrentOrientation.Altitude
             ? DriveDirection.AltitudePositive
             : DriveDirection.AltitudeNegative;
-        //already in limit
         if (CheckLimit(direction))
-        {
-            _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation
-                with
-            { ValidUntil = target.ValidUntil };
-            return;
-        }
+            return; //already in limit
+
         var driveAngle = Math.Abs(target.Altitude - _stateProvider.CurrentOrientation.Altitude);
         if (driveAngle < _deviceSettings.AltitudeMinAngleForDrive)
-        {
-            _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation
-                with
-            { ValidUntil = target.ValidUntil };
-            return;
-        }
+            return; //less than threshold
 
 
         var time = driveAngle / _stateProvider.AltitudePosDegreePerSecond;
-        var waste = direction switch
+        var timeWithWaste = time + direction switch
         {
             DriveDirection.AltitudeNegative => _stateProvider.AltitudeNegWasteTime,
             DriveDirection.AltitudePositive => _stateProvider.AltitudePosWasteTime,
             _ => throw new ArgumentOutOfRangeException()
         };
-        var timeWithWaste = time + waste;
 
         _ = await Drive(
             direction,
@@ -214,6 +188,8 @@ public class DriveService
             token,
             target.ValidUntil);
     }
+
+
 
     public async Task<DriveResult> Drive(
         DriveDirection direction,
@@ -226,18 +202,17 @@ public class DriveService
             timeToDrive,
             token);
 
-
-        HandleDriveResult(
+        UpdateCurrentOrientation(
             result,
             validUntil ?? DateTime.Now.Add(_appSettings.AutoInterval));
 
         return result;
     }
-
-    private void HandleDriveResult(DriveResult driven, DateTime validUntil)
+    private void UpdateCurrentOrientation(DriveResult driven, DateTime validUntil)
     {
         if (_stateProvider.CurrentOrientation is null)
             return;
+        // we correct the current orientation only if we have one already
 
         var (degreePerSecond, wasted) = driven.Direction switch
         {
