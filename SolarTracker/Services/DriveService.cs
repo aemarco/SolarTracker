@@ -88,14 +88,13 @@ public class DriveService
         //and how much angle do we cover per time.
         //Therefor we can calculate later how much time to drive....
 
-
         //set current position.
         var result = new Orientation(
             _deviceSettings.MinAzimuth,
             _deviceSettings.MinAltitude,
             DateTime.Now.Add(_appSettings.AutoInterval));
-
         _stateProvider.CurrentOrientation = result;
+
         return result;
     }
 

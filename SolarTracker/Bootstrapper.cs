@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using SolarTracker.Database;
 
 namespace SolarTracker;
 
@@ -13,6 +14,7 @@ public static class Bootstrapper
         builder
             .SetupConfiguration()
             .SetupLogging()
+            .SetupDatabase()
             .SetupServices()
             .SetupApi();
 
@@ -38,6 +40,11 @@ public static class Bootstrapper
             loggingBuilder.ClearProviders();
             loggingBuilder.AddSerilog(dispose: true);
         });
+        return builder;
+    }
+    private static WebApplicationBuilder SetupDatabase(this WebApplicationBuilder builder)
+    {
+        builder.Services.SetupDatabase();
         return builder;
     }
     private static WebApplicationBuilder SetupServices(this WebApplicationBuilder builder)
@@ -70,8 +77,6 @@ public static class Bootstrapper
 
         return builder;
     }
-
-
 
 
     public static WebApplication ConfigurePipeline(this WebApplication app)
