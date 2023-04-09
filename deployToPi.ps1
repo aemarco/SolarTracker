@@ -5,6 +5,9 @@ $DEPLOY_DIR = "/home/$USER/solar/"
 Write-Host "Stopping the service..."
 ssh "$USER@$TARGET" "sudo systemctl stop SolarTracker.service"
 
+Write-Host "Clean target directory..."
+ssh "$USER@$TARGET" "rm -r $DEPLOY_DIR/*"
+
 Write-Host "Publishing the application..."
 dotnet publish SolarTracker/SolarTracker.csproj -c Release -o SolarTracker\bin\publish -r linux-arm64 -f net6.0 --self-contained true
 
