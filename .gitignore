@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /SolarTracker/appsettings.Production.json
 deploy.ps1
+/fulldeploy.ps1
