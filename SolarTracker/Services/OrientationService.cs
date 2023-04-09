@@ -7,7 +7,7 @@ public interface IOrientationProvider
     /// </summary>
     /// <param name="cancellationToken">cancellationToken</param>
     /// <returns>current target orientation</returns>
-    Task<Orientation> GetTargetOrientation(CancellationToken cancellationToken);
+    Task SetTargetOrientation(CancellationToken cancellationToken);
 
 }
 
@@ -17,31 +17,33 @@ public class OrientationService : IOrientationProvider
     private readonly ISunInfoProvider _sunInfoProvider;
     private readonly DeviceSettings _deviceSettings;
     private readonly AppSettings _appSettings;
+    private readonly StateProvider _stateProvider;
     private readonly ILogger<OrientationService> _logger;
 
     public OrientationService(
         ISunInfoProvider sunInfoProvider,
         DeviceSettings deviceSettings,
         AppSettings appSettings,
+        StateProvider stateProvider,
         ILogger<OrientationService> logger)
     {
         _sunInfoProvider = sunInfoProvider;
         _deviceSettings = deviceSettings;
         _appSettings = appSettings;
+        _stateProvider = stateProvider;
         _logger = logger;
     }
 
-    public async Task<Orientation> GetTargetOrientation(CancellationToken cancellationToken)
+    public async Task SetTargetOrientation(CancellationToken cancellationToken)
     {
         var sunInfo = await _sunInfoProvider.GetSunInfo(
             _deviceSettings.Latitude,
             _deviceSettings.Longitude,
             cancellationToken);
-
         var result = CalculateTargetOrientation(sunInfo);
-
         _logger.LogInformation("Got new orientation target {@target}", result);
-        return result;
+
+        _stateProvider.LastTargetOrientation = result;
     }
 
     private Orientation CalculateTargetOrientation(SunInfo sunInfo)

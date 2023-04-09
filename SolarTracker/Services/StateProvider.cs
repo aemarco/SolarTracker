@@ -8,9 +8,10 @@ public class StateProvider
         AppSettings appSettings)
     {
         _autoEnabled = appSettings.Auto;
+        LoadDriveState();
     }
 
-
+    //app
     public event EventHandler? AutoEnabledChanged;
     private bool _autoEnabled;
     public bool AutoEnabled
@@ -26,15 +27,26 @@ public class StateProvider
         }
     }
 
+    //drive
+    private void LoadDriveState()
+    {
+
+    }
 
     public float AzimuthDegreePerSecond { get; set; }
     public float AzimuthWasteTime { get; set; }
     public float AltitudeDegreePerSecond { get; set; }
     public float AltitudeWasteTime { get; set; }
 
-
-
-    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public Orientation? LastTargetOrientation { get; set; }
     public Orientation? CurrentOrientation { get; set; }
+
+
+    public void SaveDriveState()
+    {
+
+    }
+
+
+
 }

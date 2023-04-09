@@ -98,12 +98,12 @@ public class MainService : IHostedService
 
         //get target orientation
         var orientationProvider = scope.ServiceProvider.GetRequiredService<IOrientationProvider>();
-        var targetOrientation = await orientationProvider.GetTargetOrientation(token)
+        await orientationProvider.SetTargetOrientation(token)
             .ConfigureAwait(false);
 
         //trigger positioning service to drive as necessary
         var drive = scope.ServiceProvider.GetRequiredService<DriveService>();
-        await drive.DriveToTarget(targetOrientation, token)
+        await drive.DriveToTarget(token)
             .ConfigureAwait(false);
     }
 

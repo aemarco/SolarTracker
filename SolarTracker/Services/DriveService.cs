@@ -101,14 +101,14 @@ public class DriveService
 
 
 
-    public async Task DriveToTarget(Orientation target, CancellationToken token)
+    public async Task DriveToTarget(CancellationToken token)
     {
+        var target = _stateProvider.LastTargetOrientation
+                     ?? throw new Exception("No target to drive to");
         _stateProvider.CurrentOrientation ??= await DoStartupProcedure(token);
 
         await DriveAzimuth(target, token);
         await DriveAltitude(target, token);
-
-        _stateProvider.LastTargetOrientation = target;
         _stateProvider.CurrentOrientation = _stateProvider.CurrentOrientation with
         {
             ValidUntil = target.ValidUntil
