@@ -364,3 +364,4 @@ FodyWeavers.xsd
 /SolarTracker/appsettings.Production.json
 deploy.ps1
 /fulldeploy.ps1
+/update.ps1
