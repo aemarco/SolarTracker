@@ -23,5 +23,9 @@ public class AppSettings : SettingsBase
     /// So that we don´t try to read or set any pins where we can´t
     /// </summary>
     public bool EnableFakeIo { get; set; }
+    /// <summary>
+    /// So that the system receives a shutdown order at the end of the day
+    /// </summary>
+    public bool ShutdownAfterSunset { get; set; }
 
 }

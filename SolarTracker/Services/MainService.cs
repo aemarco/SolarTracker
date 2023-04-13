@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using CliWrap;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace SolarTracker.Services;
@@ -8,15 +9,18 @@ public class MainService : IHostedService
 
     private readonly StateProvider _stateProvider;
     private readonly IServiceProvider _serviceProvider;
+    private readonly AppSettings _appSettings;
     private readonly ILogger<MainService> _logger;
     private readonly CancellationTokenSource _cts = new();
     public MainService(
         StateProvider stateProvider,
         IServiceProvider serviceProvider,
+        AppSettings appSettings,
         ILogger<MainService> logger)
     {
         _stateProvider = stateProvider;
         _serviceProvider = serviceProvider;
+        _appSettings = appSettings;
         _logger = logger;
 
         _stateProvider.AutoEnabledChanged += (_, _) => _autoChangeSource.Cancel();
@@ -85,6 +89,22 @@ public class MainService : IHostedService
     {
         if (_stateProvider.CurrentOrientation is not null)
         {
+            //if next update is due only tomorrow, maybe shutdown
+            if (_appSettings.ShutdownAfterSunset &&
+                _stateProvider.CurrentOrientation.ValidUntil.Day != DateTimeOffset.Now.Day)
+            {
+                await Task.Delay(TimeSpan.FromMinutes(5), token)
+                    .ConfigureAwait(false);
+                _ = Cli.Wrap("sudo")
+                    .WithArguments(b =>
+                    {
+                        b.Add("shutdown");
+                        b.Add("now");
+                    })
+                    .ExecuteAsync(CancellationToken.None);
+            }
+
+            //wait for next due update
             var timeToWait = _stateProvider.CurrentOrientation.ValidUntil - DateTime.Now;
             if (timeToWait > TimeSpan.Zero)
             {
@@ -105,6 +125,7 @@ public class MainService : IHostedService
         var drive = scope.ServiceProvider.GetRequiredService<DriveService>();
         await drive.DriveToTarget(token)
             .ConfigureAwait(false);
+
     }
 
 }
