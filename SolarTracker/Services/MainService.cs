@@ -93,6 +93,7 @@ public class MainService : IHostedService
             if (_appSettings.ShutdownAfterSunset &&
                 _stateProvider.CurrentOrientation.ValidUntil.Day != DateTimeOffset.Now.Day)
             {
+                _logger.LogInformation("Shutdown in 5 min...");
                 await Task.Delay(TimeSpan.FromMinutes(5), token)
                     .ConfigureAwait(false);
                 _ = Cli.Wrap("sudo")
