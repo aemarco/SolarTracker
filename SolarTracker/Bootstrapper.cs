@@ -1,6 +1,7 @@
 ﻿using aemarcoCommons.Toolbox;
 using aemarcoCommons.ToolboxAppOptions;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
@@ -46,6 +47,26 @@ public static class Bootstrapper
     {
         builder.Services.SetupDatabase();
         return builder;
+    }
+    public static IServiceCollection SetupDatabase(this IServiceCollection sc)
+    {
+        sc.AddTransient(sp =>
+        {
+            var dbOptionsBuilder = new DbContextOptionsBuilder<SolarContext>()
+                .UseSqlite("Data Source=app.db")
+                .EnableSensitiveDataLogging();
+
+            //logger if registered
+            var loggerFactory = sp.GetService<ILoggerFactory>();
+            if (loggerFactory is not null)
+            {
+                dbOptionsBuilder.UseLoggerFactory(loggerFactory);
+            }
+            return dbOptionsBuilder.Options;
+        });
+        sc.AddSingleton<SolarContextFactory>();
+
+        return sc;
     }
     private static WebApplicationBuilder SetupServices(this WebApplicationBuilder builder)
     {

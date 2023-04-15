@@ -4,28 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace SolarTracker.Database;
 
-//ioc
-public static class SolarContextFactoryExtensions
-{
-    public static IServiceCollection SetupDatabase(this IServiceCollection sc)
-    {
-        sc.AddTransient(sp =>
-        {
-            var dbOptionsBuilder = new DbContextOptionsBuilder<SolarContext>()
-                .UseSqlite("Data Source=app.db");
-            var loggerFactory = sp.GetService<ILoggerFactory>();
-            if (loggerFactory is not null)
-            {
-                dbOptionsBuilder.UseLoggerFactory(loggerFactory);
-            }
-            return dbOptionsBuilder.Options;
-        });
-        sc.AddSingleton<SolarContextFactory>();
-
-        return sc;
-    }
-}
-
 
 //run time
 public class SolarContextFactory

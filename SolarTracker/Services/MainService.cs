@@ -9,18 +9,15 @@ public class MainService : IHostedService
 
     private readonly StateProvider _stateProvider;
     private readonly IServiceProvider _serviceProvider;
-    private readonly AppSettings _appSettings;
     private readonly ILogger<MainService> _logger;
     private readonly CancellationTokenSource _cts = new();
     public MainService(
         StateProvider stateProvider,
         IServiceProvider serviceProvider,
-        AppSettings appSettings,
         ILogger<MainService> logger)
     {
         _stateProvider = stateProvider;
         _serviceProvider = serviceProvider;
-        _appSettings = appSettings;
         _logger = logger;
 
         _stateProvider.AutoEnabledChanged += (_, _) => _autoChangeSource.Cancel();
@@ -57,6 +54,12 @@ public class MainService : IHostedService
                     _autoChangeSource.Token,
                     token);
 
+                if (_stateProvider.CheckIfShutdownIsDue())
+                {
+                    await DoShutdown(source.Token)
+                        .ConfigureAwait(false);
+                    break;
+                }
                 if (_stateProvider.AutoEnabled)
                     await DoAuto(source.Token)
                         .ConfigureAwait(false);
@@ -64,17 +67,25 @@ public class MainService : IHostedService
                     await DoAutoDisabled(source.Token)
                         .ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ab)
             {
-                //on our token we fall out of loop anyway, otherwise we continue.
+                if (token.IsCancellationRequested)
+                    _logger.LogInformation(ab, "Main loop canceled");
+                else if (_autoChangeSource.IsCancellationRequested)
+                    _logger.LogInformation(ab, "Auto change cancel");
+                else
+                    _logger.LogWarning(ab, "Unknown cancellation");
+
+                //on our token we fall out of loop anyway,
+                //- otherwise we continue.
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Something went wrong....");
             }
         }
+        _logger.LogDebug("Main loop ended");
     }
-
 
 
 
@@ -87,32 +98,14 @@ public class MainService : IHostedService
 
     private async Task DoAuto(CancellationToken token)
     {
-        if (_stateProvider.CurrentOrientation is not null)
+        if (_stateProvider.CurrentOrientation?.ValidUntil is { } valid &&
+            valid - DateTime.Now is { } timeToWait &&
+            timeToWait > TimeSpan.Zero)
         {
-            //if next update is due only tomorrow, maybe shutdown
-            if (_appSettings.ShutdownAfterSunset &&
-                _stateProvider.CurrentOrientation.ValidUntil.Day != DateTimeOffset.Now.Day)
-            {
-                _logger.LogInformation("Shutdown in 5 min...");
-                await Task.Delay(TimeSpan.FromMinutes(5), token)
-                    .ConfigureAwait(false);
-                _ = Cli.Wrap("sudo")
-                    .WithArguments(b =>
-                    {
-                        b.Add("shutdown");
-                        b.Add("now");
-                    })
-                    .ExecuteAsync(CancellationToken.None);
-            }
-
             //wait for next due update
-            var timeToWait = _stateProvider.CurrentOrientation.ValidUntil - DateTime.Now;
-            if (timeToWait > TimeSpan.Zero)
-            {
-                _logger.LogInformation("Wait for {validUntil} ({timeSpan}) or auto mode disable", _stateProvider.CurrentOrientation.ValidUntil, timeToWait);
-                await Task.Delay(timeToWait, token)
-                    .ConfigureAwait(false);
-            }
+            _logger.LogInformation("Wait for {validUntil} ({timeSpan}) or auto mode disable", _stateProvider.CurrentOrientation.ValidUntil, timeToWait);
+            await Task.Delay(timeToWait, token)
+                .ConfigureAwait(false);
         }
 
         using var scope = _serviceProvider.CreateScope();
@@ -126,7 +119,21 @@ public class MainService : IHostedService
         var drive = scope.ServiceProvider.GetRequiredService<DriveService>();
         await drive.DriveToTarget(token)
             .ConfigureAwait(false);
+    }
 
+    private async Task DoShutdown(CancellationToken token)
+    {
+        _logger.LogInformation("Shutdown in 5 min...");
+        await Task.Delay(TimeSpan.FromMinutes(5), token)
+            .ConfigureAwait(false);
+        var result = await Cli.Wrap("sudo")
+            .WithArguments(b =>
+            {
+                b.Add("shutdown");
+                b.Add("now");
+            })
+            .ExecuteAsync(CancellationToken.None);
+        _logger.LogInformation("Shutdown command issued with result {@result}", result);
     }
 
 }
