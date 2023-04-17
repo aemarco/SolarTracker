@@ -4,13 +4,12 @@ using Microsoft.Extensions.Hosting;
 
 namespace SolarTracker.Services;
 
-public class MainService : IHostedService
+public class MainService : BackgroundService
 {
 
     private readonly StateProvider _stateProvider;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainService> _logger;
-    private readonly CancellationTokenSource _cts = new();
     public MainService(
         StateProvider stateProvider,
         IServiceProvider serviceProvider,
@@ -21,29 +20,25 @@ public class MainService : IHostedService
         _logger = logger;
 
         _stateProvider.AutoEnabledChanged += (_, _) => _autoChangeSource.Cancel();
-        _mainTask = Task.CompletedTask;
     }
 
-
-    public Task StartAsync(CancellationToken _)
+    public override Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Startup");
-        _mainTask = Task.Run(() => MainLoop(_cts.Token), _cts.Token);
-        return Task.CompletedTask;
+        return base.StartAsync(cancellationToken);
     }
-    public async Task StopAsync(CancellationToken abortGraceFull)
+
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Graceful shutdown started");
-        _cts.Cancel();
-        await Task.WhenAny(
-            _mainTask,
-            Task.Delay(Timeout.Infinite, abortGraceFull));
+        return base.StopAsync(cancellationToken);
     }
-    private Task _mainTask;
+
+
     private CancellationTokenSource _autoChangeSource = new();
-    private async Task MainLoop(CancellationToken token)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!token.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
@@ -52,7 +47,7 @@ public class MainService : IHostedService
                     _autoChangeSource = new CancellationTokenSource();
                 var source = CancellationTokenSource.CreateLinkedTokenSource(
                     _autoChangeSource.Token,
-                    token);
+                    stoppingToken);
 
                 if (_stateProvider.CheckIfShutdownIsDue())
                 {
@@ -69,7 +64,7 @@ public class MainService : IHostedService
             }
             catch (OperationCanceledException ab)
             {
-                if (token.IsCancellationRequested)
+                if (stoppingToken.IsCancellationRequested)
                     _logger.LogInformation(ab, "Main loop canceled");
                 else if (_autoChangeSource.IsCancellationRequested)
                     _logger.LogInformation(ab, "Auto change cancel");
@@ -86,7 +81,6 @@ public class MainService : IHostedService
         }
         _logger.LogDebug("Main loop ended");
     }
-
 
 
     private async Task DoAutoDisabled(CancellationToken token)
