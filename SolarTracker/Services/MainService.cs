@@ -130,7 +130,7 @@ public class MainService : IHostedService
             .WithArguments(b =>
             {
                 b.Add("shutdown");
-                b.Add("now");
+                b.Add("+1");
             })
             .ExecuteAsync(CancellationToken.None);
         _logger.LogInformation("Shutdown command issued with result {@result}", result);
