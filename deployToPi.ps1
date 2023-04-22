@@ -1,5 +1,7 @@
-$USER = "user"
-$TARGET = "mypi"
+Param (
+    [string]$USER,
+    [string]$TARGET
+)
 $DEPLOY_DIR = "/home/$USER/solar/"
 
 Write-Host "Stopping the service..."
@@ -27,6 +29,7 @@ Requires=network-online.target
 
 [Service]
 WorkingDirectory=$DEPLOY_DIR
+ExecStartPre=/bin/sh -c 'until timedatectl status | grep "synchronized: yes"; do sleep 1; done'
 ExecStart=sudo $DEPLOY_DIR/SolarTracker
 Restart=always
 RestartSec=10
