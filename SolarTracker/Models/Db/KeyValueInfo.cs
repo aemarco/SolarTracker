@@ -1,4 +1,4 @@
-﻿namespace SolarTracker.Database;
+﻿namespace SolarTracker.Models.Db;
 
 public class KeyValueInfo
 {

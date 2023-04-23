@@ -367,4 +367,3 @@ FodyWeavers.xsd
 /SolarTracker/app.db
 /SolarTracker/app.db-shm
 /SolarTracker/app.db-wal
-/SolarTracker/Services/TimedHostedService.cs

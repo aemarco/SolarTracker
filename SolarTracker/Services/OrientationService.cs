@@ -1,4 +1,8 @@
-﻿namespace SolarTracker.Services;
+﻿using Microsoft.EntityFrameworkCore;
+using SolarTracker.Database;
+using System.Linq;
+
+namespace SolarTracker.Services;
 
 public interface IOrientationProvider
 {
@@ -16,6 +20,7 @@ public class OrientationService : IOrientationProvider
 
     private readonly ISunInfoProvider _sunInfoProvider;
     private readonly DeviceSettings _deviceSettings;
+    private readonly SolarContextFactory _factory;
     private readonly AppSettings _appSettings;
     private readonly StateProvider _stateProvider;
     private readonly ILogger<OrientationService> _logger;
@@ -23,12 +28,14 @@ public class OrientationService : IOrientationProvider
     public OrientationService(
         ISunInfoProvider sunInfoProvider,
         DeviceSettings deviceSettings,
+        SolarContextFactory factory,
         AppSettings appSettings,
         StateProvider stateProvider,
         ILogger<OrientationService> logger)
     {
         _sunInfoProvider = sunInfoProvider;
         _deviceSettings = deviceSettings;
+        _factory = factory;
         _appSettings = appSettings;
         _stateProvider = stateProvider;
         _logger = logger;
@@ -36,14 +43,52 @@ public class OrientationService : IOrientationProvider
 
     public async Task SetTargetOrientation(CancellationToken cancellationToken)
     {
-        var sunInfo = await _sunInfoProvider.GetSunInfo(
-            _deviceSettings.Latitude,
-            _deviceSettings.Longitude,
-            cancellationToken);
+        SunInfo? sunInfo;
+        try
+        {
+            sunInfo = await _sunInfoProvider.GetSunInfo(
+                _deviceSettings.Latitude,
+                _deviceSettings.Longitude,
+                cancellationToken);
+
+            await using var ctx = _factory.Create();
+            ctx.SunInfos.Add(sunInfo);
+            ctx.SunInfos.RemoveRange(ctx.SunInfos
+                .Where(x => x.Timestamp < DateTime.Now.AddDays(-14)));
+
+            await ctx.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get SunInfo from SunInfoProvider");
+            sunInfo = await GetFallbackSunInfo(cancellationToken);
+        }
+
+
+        if (sunInfo is null)
+            throw new Exception("Could not get any SunInfo");
+
         var result = CalculateTargetOrientation(sunInfo);
         _logger.LogInformation("Got new orientation target {@target}", result);
 
         _stateProvider.LastTargetOrientation = result;
+    }
+
+    private async Task<SunInfo?> GetFallbackSunInfo(CancellationToken cancellationToken)
+    {
+        var currentTime = DateTime.Now.TimeOfDay.TotalSeconds;
+        await using var ctx = _factory.Create();
+        var result = await ctx.SunInfos
+            .AsNoTracking()
+            .Where(x =>
+                x.Latitude >= _deviceSettings.Latitude - 0.01 &&
+                x.Latitude <= _deviceSettings.Latitude + 0.01 &&
+                x.Longitude >= _deviceSettings.Longitude - 0.01 &&
+                x.Longitude <= _deviceSettings.Longitude + 0.01)
+            .OrderBy(x => Math.Abs(currentTime - x.SecondsOfDay))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return result;
     }
 
     private Orientation CalculateTargetOrientation(SunInfo sunInfo)

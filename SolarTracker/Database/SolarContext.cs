@@ -9,21 +9,26 @@ public class SolarContext : DbContext
     { }
 
     public DbSet<KeyValueInfo> KeyValueInfos { get; set; } = null!;
+    public DbSet<SunInfo> SunInfos { get; set; } = null!;
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<KeyValueInfo>(b =>
+        modelBuilder.Entity<KeyValueInfo>(e =>
         {
-            b.Property<string>("Key")
+            e.ToTable("KeyValueInfos");
+            e.HasKey(x => x.Key);
+            e.Property<string>("Key")
                 .HasColumnType("TEXT")
                 .HasMaxLength(100)
                 .ValueGeneratedNever();
+        });
 
-            b.Property<string>("Value")
-                .HasColumnType("TEXT");
+        modelBuilder.Entity<SunInfo>(e =>
+        {
+            e.ToTable("SolarInfos");
+            e.HasKey(x => new { x.Timestamp, x.Latitude, x.Longitude });
 
-            b.HasKey("Key");
-            b.ToTable("KeyValueInfos");
         });
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SolarTracker.Database;
 
@@ -10,9 +11,10 @@ using SolarTracker.Database;
 namespace SolarTracker.Migrations
 {
     [DbContext(typeof(SolarContext))]
-    partial class SolarContextModelSnapshot : ModelSnapshot
+    [Migration("20230423105515_SunInfoAdded")]
+    partial class SunInfoAdded
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.15");
@@ -47,9 +49,6 @@ namespace SolarTracker.Migrations
                         .HasColumnType("REAL");
 
                     b.Property<float>("Azimuth")
-                        .HasColumnType("REAL");
-
-                    b.Property<double>("SecondsOfDay")
                         .HasColumnType("REAL");
 
                     b.Property<TimeOnly>("Sunrise")
