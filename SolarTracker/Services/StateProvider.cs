@@ -103,4 +103,23 @@ public class StateProvider
                CurrentOrientation.ValidUntil.Day != DateTimeOffset.Now.Day;
     }
 
+
+
+
+
+    private SunProviderFallbackInfo? _sunProviderFallbackInfo;
+    public SunProviderFallbackInfo SunProviderFallbackInfo
+    {
+        get => _sunProviderFallbackInfo ??= _factory.Create().GetInfo<SunProviderFallbackInfo?>() ?? new SunProviderFallbackInfo(false);
+        set
+        {
+            if (_sunProviderFallbackInfo?.Active == value.Active)
+                return;
+
+            //only save a change when state has changed
+            _sunProviderFallbackInfo = value;
+            using var ctx = _factory.Create().SetInfo(_sunProviderFallbackInfo);
+        }
+    }
+
 }

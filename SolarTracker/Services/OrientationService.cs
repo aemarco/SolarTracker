@@ -25,6 +25,7 @@ public class OrientationService : IOrientationProvider
     private readonly StateProvider _stateProvider;
     private readonly ILogger<OrientationService> _logger;
 
+
     public OrientationService(
         ISunInfoProvider sunInfoProvider,
         DeviceSettings deviceSettings,
@@ -41,6 +42,7 @@ public class OrientationService : IOrientationProvider
         _logger = logger;
     }
 
+
     public async Task SetTargetOrientation(CancellationToken cancellationToken)
     {
         SunInfo? sunInfo;
@@ -50,17 +52,15 @@ public class OrientationService : IOrientationProvider
                 _deviceSettings.Latitude,
                 _deviceSettings.Longitude,
                 cancellationToken);
+            _stateProvider.SunProviderFallbackInfo = new SunProviderFallbackInfo(false);
 
-            await using var ctx = _factory.Create();
-            ctx.SunInfos.Add(sunInfo);
-            ctx.SunInfos.RemoveRange(ctx.SunInfos
-                .Where(x => x.Timestamp < DateTime.Now.AddDays(-14)));
-
-            await ctx.SaveChangesAsync(cancellationToken);
+            await SetNewSunInfoForFallback(sunInfo, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get SunInfo from SunInfoProvider");
+            _stateProvider.SunProviderFallbackInfo = new SunProviderFallbackInfo(true, ex.ToString());
+
             sunInfo = await GetFallbackSunInfo(cancellationToken);
         }
 
@@ -70,8 +70,31 @@ public class OrientationService : IOrientationProvider
 
         var result = CalculateTargetOrientation(sunInfo);
         _logger.LogInformation("Got new orientation target {@target}", result);
-
         _stateProvider.LastTargetOrientation = result;
+    }
+
+    private async Task SetNewSunInfoForFallback(SunInfo sunInfo, CancellationToken cancellationToken)
+    {
+        await using var ctx = _factory.Create();
+
+        //delete entries which are not matching our position.
+        ctx.SunInfos.RemoveRange(ctx.SunInfos
+            .Where(x =>
+                x.Latitude > _deviceSettings.Latitude + 0.01 ||
+                x.Latitude < _deviceSettings.Latitude - 0.01 ||
+                x.Longitude > _deviceSettings.Longitude + 0.01 ||
+                x.Longitude < _deviceSettings.Longitude - 0.01));
+        await ctx.SaveChangesAsync(cancellationToken);
+
+        //delete oldest entries, keep only n entries
+        ctx.SunInfos.RemoveRange(ctx.SunInfos
+            .OrderByDescending(x => x.Timestamp)
+            .Skip(600));
+        await ctx.SaveChangesAsync(cancellationToken);
+
+        //add new entry
+        ctx.SunInfos.Add(sunInfo);
+        await ctx.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<SunInfo?> GetFallbackSunInfo(CancellationToken cancellationToken)
