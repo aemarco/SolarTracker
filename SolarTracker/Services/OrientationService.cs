@@ -23,6 +23,7 @@ public class OrientationService : IOrientationProvider
     private readonly SolarContextFactory _factory;
     private readonly AppSettings _appSettings;
     private readonly StateProvider _stateProvider;
+    private readonly IClock _clock;
     private readonly ILogger<OrientationService> _logger;
 
 
@@ -32,6 +33,7 @@ public class OrientationService : IOrientationProvider
         SolarContextFactory factory,
         AppSettings appSettings,
         StateProvider stateProvider,
+        IClock clock,
         ILogger<OrientationService> logger)
     {
         _sunInfoProvider = sunInfoProvider;
@@ -39,6 +41,7 @@ public class OrientationService : IOrientationProvider
         _factory = factory;
         _appSettings = appSettings;
         _stateProvider = stateProvider;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -99,7 +102,7 @@ public class OrientationService : IOrientationProvider
 
     private async Task<SunInfo?> GetFallbackSunInfo(CancellationToken cancellationToken)
     {
-        var currentTime = DateTime.Now.TimeOfDay.TotalSeconds;
+        var currentTime = _clock.Now.TimeOfDay.TotalSeconds;
         await using var ctx = _factory.Create();
         var result = await ctx.SunInfos
             .AsNoTracking()
@@ -124,22 +127,22 @@ public class OrientationService : IOrientationProvider
         // - after driving range, no sun   ---> min / min
 
         Orientation result;
-        var time = TimeOnly.FromDateTime(DateTime.Now);
+        var time = _clock.TimeNow;
 
         if (time < sunInfo.Sunrise) //before driving range, no sun
         {
-            var validUntil = DateOnly.FromDateTime(DateTime.Now).ToDateTime(sunInfo.Sunrise);
+            var validUntil = _clock.DateNow.ToDateTime(sunInfo.Sunrise);
             result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude, validUntil);
         }
         else if (time >= sunInfo.Sunset) //after driving range, no sun
         {
             //sunrise does only fluctuate 1-2 min per day, so today sunrise is good enough for tomorrow
-            var validUntil = DateOnly.FromDateTime(DateTime.Now.AddDays(1)).ToDateTime(sunInfo.Sunrise);
+            var validUntil = _clock.DateNow.AddDays(1).ToDateTime(sunInfo.Sunrise);
             result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude, validUntil);
         }
         else //sun
         {
-            var validUntil = DateTime.Now.Add(_appSettings.AutoInterval);
+            var validUntil = _clock.Now.Add(_appSettings.AutoInterval);
             result = new Orientation(sunInfo.Azimuth, sunInfo.Altitude, validUntil);
         }
         return result;

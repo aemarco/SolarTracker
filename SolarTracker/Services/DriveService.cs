@@ -9,16 +9,20 @@ public class DriveService
     private readonly DeviceSettings _deviceSettings;
     private readonly AppSettings _appSettings;
     private readonly IIoService _ioService;
+    private readonly IClock _clock;
+
     public DriveService(
         StateProvider stateProvider,
         DeviceSettings deviceSettings,
         AppSettings appSettings,
-        IIoService ioService)
+        IIoService ioService,
+        IClock clock)
     {
         _stateProvider = stateProvider;
         _deviceSettings = deviceSettings;
         _appSettings = appSettings;
         _ioService = ioService;
+        _clock = clock;
     }
 
 
@@ -92,7 +96,7 @@ public class DriveService
         var result = new Orientation(
             _deviceSettings.MinAzimuth,
             _deviceSettings.MinAltitude,
-            DateTime.Now.Add(_appSettings.AutoInterval));
+            _clock.Now.Add(_appSettings.AutoInterval));
         _stateProvider.CurrentOrientation = result;
 
         return result;
@@ -177,7 +181,7 @@ public class DriveService
 
         UpdateCurrentOrientation(
             result,
-            validUntil ?? DateTime.Now.Add(_appSettings.AutoInterval));
+            validUntil ?? _clock.Now.Add(_appSettings.AutoInterval));
 
         return result;
     }

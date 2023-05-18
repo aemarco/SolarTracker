@@ -87,6 +87,8 @@ public static class Bootstrapper
         var enableFakeIo = builder.Configuration.GetValue<bool>($"{nameof(AppSettings)}:{nameof(AppSettings.EnableFakeIo)}");
         sc.AddTransient(typeof(IIoService), enableFakeIo ? typeof(FakeIoService) : typeof(IoService));
 
+        sc.AddSingleton<IClock, Clock>();
+
         return builder;
     }
     private static WebApplicationBuilder SetupApi(this WebApplicationBuilder builder)

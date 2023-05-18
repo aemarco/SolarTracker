@@ -10,16 +10,19 @@ public class MainService : BackgroundService
     private readonly StateProvider _stateProvider;
     private readonly AppSettings _appSettings;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IClock _clock;
     private readonly ILogger<MainService> _logger;
     public MainService(
         StateProvider stateProvider,
         AppSettings appSettings,
         IServiceProvider serviceProvider,
+        IClock clock,
         ILogger<MainService> logger)
     {
         _stateProvider = stateProvider;
         _appSettings = appSettings;
         _serviceProvider = serviceProvider;
+        _clock = clock;
         _logger = logger;
 
         _stateProvider.AutoEnabledChanged += (_, _) => _autoChangeSource.Cancel();
@@ -94,7 +97,7 @@ public class MainService : BackgroundService
     private async Task DoAuto(CancellationToken token)
     {
         if (_stateProvider.CurrentOrientation?.ValidUntil is { } valid &&
-            valid - DateTime.Now is { } timeToWait &&
+            valid - _clock.Now is { } timeToWait &&
             timeToWait > TimeSpan.Zero)
         {
             //wait for next due update
@@ -135,7 +138,7 @@ public class MainService : BackgroundService
             return false;
 
         //valid until is not at least tomorrow
-        if (DateOnly.FromDateTime(co.ValidUntil) <= DateOnly.FromDateTime(DateTime.Now))
+        if (DateOnly.FromDateTime(co.ValidUntil) <= _clock.DateNow)
             return false;
 
 
