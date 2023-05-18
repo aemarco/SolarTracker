@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Polly;
+using Polly.Contrib.WaitAndRetry;
 using Serilog;
 using SolarTracker.Database;
 
@@ -80,7 +82,8 @@ public static class Bootstrapper
 
         sc.AddTransient<DriveService>();
         sc.AddTransient<IOrientationProvider, OrientationService>();
-        sc.AddHttpClient<ISunInfoProvider, IpGeolocationClient>();
+        sc.AddHttpClient<ISunInfoProvider, IpGeolocationClient>()
+            .AddTransientHttpErrorPolicy(p => p.WaitAndRetryAsync(Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(1), 5)));
         var enableFakeIo = builder.Configuration.GetValue<bool>($"{nameof(AppSettings)}:{nameof(AppSettings.EnableFakeIo)}");
         sc.AddTransient(typeof(IIoService), enableFakeIo ? typeof(FakeIoService) : typeof(IoService));
 

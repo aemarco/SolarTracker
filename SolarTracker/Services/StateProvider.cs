@@ -20,8 +20,6 @@ public class StateProvider
     //app
     public event EventHandler? AutoEnabledChanged;
     private bool _autoEnabled;
-
-
     public bool AutoEnabled
     {
         get => _autoEnabled;
