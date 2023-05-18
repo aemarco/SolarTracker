@@ -5,13 +5,12 @@ namespace SolarTracker.Services;
 
 public class StateProvider
 {
-    private readonly AppSettings _appSettings;
+
     private readonly SolarContextFactory _factory;
     public StateProvider(
         AppSettings appSettings,
         SolarContextFactory factory)
     {
-        _appSettings = appSettings;
         _factory = factory;
         _autoEnabled = appSettings.Auto;
     }
@@ -92,14 +91,6 @@ public class StateProvider
 
     public Orientation? LastTargetOrientation { get; set; }
 
-
-    public bool CheckIfShutdownIsDue()
-    {
-        //if next update is due only tomorrow, maybe shutdown
-        return _appSettings.ShutdownAfterSunset &&
-               CurrentOrientation is not null &&
-               CurrentOrientation.ValidUntil.Day != DateTimeOffset.Now.Day;
-    }
 
 
 

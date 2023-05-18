@@ -8,14 +8,17 @@ public class MainService : BackgroundService
 {
 
     private readonly StateProvider _stateProvider;
+    private readonly AppSettings _appSettings;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<MainService> _logger;
     public MainService(
         StateProvider stateProvider,
+        AppSettings appSettings,
         IServiceProvider serviceProvider,
         ILogger<MainService> logger)
     {
         _stateProvider = stateProvider;
+        _appSettings = appSettings;
         _serviceProvider = serviceProvider;
         _logger = logger;
 
@@ -49,12 +52,10 @@ public class MainService : BackgroundService
                     _autoChangeSource.Token,
                     stoppingToken);
 
-                if (_stateProvider.CheckIfShutdownIsDue())
-                {
-                    await DoShutdown(source.Token)
-                        .ConfigureAwait(false);
+                if (await CheckShutDownRoutine(source.Token))
                     break;
-                }
+
+
                 if (_stateProvider.AutoEnabled)
                     await DoAuto(source.Token)
                         .ConfigureAwait(false);
@@ -115,8 +116,29 @@ public class MainService : BackgroundService
             .ConfigureAwait(false);
     }
 
-    private async Task DoShutdown(CancellationToken token)
+
+
+    /// <summary>
+    /// Condition Check for shutdown initiation.
+    /// If all conditions are met, shutdown is initiated, and result is true
+    /// </summary>
+    /// <param name="token"></param>
+    /// <returns>true if a shutdown was initiated</returns>
+    private async Task<bool> CheckShutDownRoutine(CancellationToken token)
     {
+        //feature not enabled
+        if (!_appSettings.ShutdownAfterSunset)
+            return false;
+
+        //there is no orientation info
+        if (_stateProvider.CurrentOrientation is not { } co)
+            return false;
+
+        //valid until is not at least tomorrow
+        if (DateOnly.FromDateTime(co.ValidUntil) <= DateOnly.FromDateTime(DateTime.Now))
+            return false;
+
+
         _logger.LogInformation("Shutdown in 5 min...");
         await Task.Delay(TimeSpan.FromMinutes(5), token)
             .ConfigureAwait(false);
@@ -128,6 +150,7 @@ public class MainService : BackgroundService
             })
             .ExecuteAsync(CancellationToken.None);
         _logger.LogInformation("Shutdown command issued with result {@result}", result);
+        return true;
     }
 
 }
