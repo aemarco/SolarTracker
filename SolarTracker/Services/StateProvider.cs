@@ -7,11 +7,15 @@ public class StateProvider
 {
 
     private readonly SolarContextFactory _factory;
+    private readonly IClock _clock;
+
     public StateProvider(
         AppSettings appSettings,
-        SolarContextFactory factory)
+        SolarContextFactory factory,
+        IClock clock)
     {
         _factory = factory;
+        _clock = clock;
         _autoEnabled = appSettings.Auto;
     }
 
@@ -99,7 +103,7 @@ public class StateProvider
     private SunProviderFallbackInfo? _sunProviderFallbackInfo;
     public SunProviderFallbackInfo SunProviderFallbackInfo
     {
-        get => _sunProviderFallbackInfo ??= _factory.Create().GetInfo<SunProviderFallbackInfo?>() ?? new SunProviderFallbackInfo(false);
+        get => _sunProviderFallbackInfo ??= _factory.Create().GetInfo<SunProviderFallbackInfo?>() ?? new SunProviderFallbackInfo(false, _clock.Now);
         set
         {
             if (_sunProviderFallbackInfo?.Active == value.Active)

@@ -83,7 +83,8 @@ public static class Bootstrapper
         sc.AddTransient<DriveService>();
         sc.AddTransient<IOrientationProvider, OrientationService>();
         sc.AddHttpClient<ISunInfoProvider, IpGeolocationClient>()
-            .AddTransientHttpErrorPolicy(p => p.WaitAndRetryAsync(Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(1), 5)));
+            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromMinutes(1)))
+            .AddTransientHttpErrorPolicy(p => p.WaitAndRetryAsync(Backoff.DecorrelatedJitterBackoffV2(TimeSpan.FromSeconds(5), 5)));
         var enableFakeIo = builder.Configuration.GetValue<bool>($"{nameof(AppSettings)}:{nameof(AppSettings.EnableFakeIo)}");
         sc.AddTransient(typeof(IIoService), enableFakeIo ? typeof(FakeIoService) : typeof(IoService));
 

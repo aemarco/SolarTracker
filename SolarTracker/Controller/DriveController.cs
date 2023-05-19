@@ -10,14 +10,17 @@ public class DriveController : ControllerBase
 
     private readonly StateProvider _stateProvider;
     private readonly DriveService _driveService;
+    private readonly IClock _clock;
     private readonly ILogger<DriveController> _logger;
     public DriveController(
         StateProvider stateProvider,
         DriveService driveService,
+        IClock clock,
         ILogger<DriveController> logger)
     {
         _stateProvider = stateProvider;
         _driveService = driveService;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -30,7 +33,8 @@ public class DriveController : ControllerBase
             _driveService.CheckLimit(DriveDirection.AzimuthNegative),
             _driveService.CheckLimit(DriveDirection.AzimuthPositive),
             _driveService.CheckLimit(DriveDirection.AltitudeNegative),
-            _driveService.CheckLimit(DriveDirection.AltitudePositive));
+            _driveService.CheckLimit(DriveDirection.AltitudePositive),
+            _clock.Now);
 
         _logger.LogDebug("GetLimits with result: {@result}", result);
         return result;

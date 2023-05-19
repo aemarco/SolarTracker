@@ -55,14 +55,14 @@ public class OrientationService : IOrientationProvider
                 _deviceSettings.Latitude,
                 _deviceSettings.Longitude,
                 cancellationToken);
-            _stateProvider.SunProviderFallbackInfo = new SunProviderFallbackInfo(false);
+            _stateProvider.SunProviderFallbackInfo = new SunProviderFallbackInfo(false, _clock.Now);
 
             await SetNewSunInfoForFallback(sunInfo, cancellationToken);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get SunInfo from SunInfoProvider");
-            _stateProvider.SunProviderFallbackInfo = new SunProviderFallbackInfo(true, ex.ToString());
+            _stateProvider.SunProviderFallbackInfo = new SunProviderFallbackInfo(true, _clock.Now, ex.ToString());
 
             sunInfo = await GetFallbackSunInfo(cancellationToken);
         }
@@ -132,18 +132,18 @@ public class OrientationService : IOrientationProvider
         if (time < sunInfo.Sunrise) //before driving range, no sun
         {
             var validUntil = _clock.DateNow.ToDateTime(sunInfo.Sunrise);
-            result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude, validUntil);
+            result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude, validUntil, _clock.Now);
         }
         else if (time >= sunInfo.Sunset) //after driving range, no sun
         {
             //sunrise does only fluctuate 1-2 min per day, so today sunrise is good enough for tomorrow
             var validUntil = _clock.DateNow.AddDays(1).ToDateTime(sunInfo.Sunrise);
-            result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude, validUntil);
+            result = new Orientation(_deviceSettings.MinAzimuth, _deviceSettings.MinAltitude, validUntil, _clock.Now);
         }
         else //sun
         {
             var validUntil = _clock.Now.Add(_appSettings.AutoInterval);
-            result = new Orientation(sunInfo.Azimuth, sunInfo.Altitude, validUntil);
+            result = new Orientation(sunInfo.Azimuth, sunInfo.Altitude, validUntil, _clock.Now);
         }
         return result;
     }

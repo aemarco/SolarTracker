@@ -1,10 +1,8 @@
-﻿namespace SolarTracker.Models;
-// ReSharper disable UnusedMember.Global
+﻿// ReSharper disable NotAccessedPositionalProperty.Global
+namespace SolarTracker.Models;
 
 public record Orientation(
     float Azimuth,
     float Altitude,
-    DateTime ValidUntil)
-{
-    public DateTime Timestamp { get; } = DateTime.Now;
-}
+    DateTime ValidUntil,
+    DateTime Timestamp);

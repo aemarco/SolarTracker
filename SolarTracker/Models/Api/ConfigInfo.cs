@@ -3,7 +3,5 @@
 // ReSharper disable UnusedMember.Global
 public record ConfigInfo(
     AppSettings AppSettings,
-    DeviceSettings DeviceSettings)
-{
-    public DateTime Timestamp { get; } = DateTime.Now;
-}
+    DeviceSettings DeviceSettings,
+    DateTime Timestamp);

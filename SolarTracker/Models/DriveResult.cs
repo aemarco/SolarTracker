@@ -6,7 +6,5 @@ public record DriveResult(
     DriveDirection Direction,
     TimeSpan TimeDriven,
     bool LimitReached,
-    bool Aborted)
-{
-    public DateTime Timestamp { get; } = DateTime.Now;
-}
+    bool Aborted,
+    DateTime Timestamp);

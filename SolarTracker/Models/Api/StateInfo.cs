@@ -3,7 +3,5 @@
 // ReSharper disable UnusedMember.Global
 
 public record StateInfo(
-    StateProvider State)
-{
-    public DateTime Timestamp { get; } = DateTime.Now;
-}
+    StateProvider State,
+    DateTime Timestamp);

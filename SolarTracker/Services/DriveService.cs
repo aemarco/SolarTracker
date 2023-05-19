@@ -96,7 +96,8 @@ public class DriveService
         var result = new Orientation(
             _deviceSettings.MinAzimuth,
             _deviceSettings.MinAltitude,
-            _clock.Now.Add(_appSettings.AutoInterval));
+            _clock.Now.Add(_appSettings.AutoInterval),
+            _clock.Now);
         _stateProvider.CurrentOrientation = result;
 
         return result;
@@ -223,7 +224,8 @@ public class DriveService
         _stateProvider.CurrentOrientation = new Orientation(
             azi,
             alt,
-            validUntil);
+            validUntil,
+            _clock.Now);
     }
 
     public bool CheckLimit(DriveDirection direction)

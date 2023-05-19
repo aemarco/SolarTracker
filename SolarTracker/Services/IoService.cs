@@ -37,13 +37,16 @@ public interface IIoService
 public class IoService : IIoService
 {
     private readonly DeviceSettings _deviceSettings;
+    private readonly IClock _clock;
     private readonly ILogger<IoService> _logger;
     private readonly GpioController _controller;
     public IoService(
         DeviceSettings deviceSettings,
+        IClock clock,
         ILogger<IoService> logger)
     {
         _deviceSettings = deviceSettings;
+        _clock = clock;
         _logger = logger;
         _controller = new GpioController();
     }
@@ -86,7 +89,8 @@ public class IoService : IIoService
             direction,
             TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds),
             limitFunc(),
-            token.IsCancellationRequested);
+            token.IsCancellationRequested,
+            _clock.Now);
 
         _logger.LogInformation("Drive success with result: {@result}", result);
 
@@ -118,6 +122,13 @@ public class IoService : IIoService
 
 public class FakeIoService : IIoService
 {
+    private readonly IClock _clock;
+
+    public FakeIoService(
+        IClock clock)
+    {
+        _clock = clock;
+    }
 
     public Task<DriveResult> Drive(
         DriveDirection direction,
@@ -180,7 +191,8 @@ public class FakeIoService : IIoService
             direction,
             TimeSpan.FromSeconds(driven + 1),
             limit,
-            token.IsCancellationRequested));
+            token.IsCancellationRequested,
+            _clock.Now));
     }
 
 

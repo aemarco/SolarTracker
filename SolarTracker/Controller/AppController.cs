@@ -7,13 +7,16 @@ namespace SolarTracker.Controller;
 public class AppController : ControllerBase
 {
     private readonly StateProvider _stateProvider;
+    private readonly IClock _clock;
     private readonly ILogger<AppController> _logger;
 
     public AppController(
         StateProvider stateProvider,
+        IClock clock,
         ILogger<AppController> logger)
     {
         _stateProvider = stateProvider;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -21,7 +24,7 @@ public class AppController : ControllerBase
     [HttpGet]
     public StateInfo Get()
     {
-        var result = new StateInfo(_stateProvider);
+        var result = new StateInfo(_stateProvider, _clock.Now);
         _logger.LogDebug("AppState now {@appState}", result);
         return result;
     }
