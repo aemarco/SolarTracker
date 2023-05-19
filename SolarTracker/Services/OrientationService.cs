@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using aemarcoCommons.Extensions.NetworkExtensions;
+using Microsoft.EntityFrameworkCore;
 using SolarTracker.Database;
 using System.Linq;
 
@@ -61,8 +62,14 @@ public class OrientationService : IOrientationProvider
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get SunInfo from SunInfoProvider");
-            _stateProvider.SunProviderFallbackInfo = new SunProviderFallbackInfo(true, _clock.Now, ex.ToString());
+
+            var onlineState = (new Uri("google.com").TcpPing()) switch
+            {
+                true => "Internet Up",
+                false => "Internet Down"
+            };
+            _stateProvider.SunProviderFallbackInfo = new SunProviderFallbackInfo(true, _clock.Now, onlineState, ex.Message);
+            _logger.LogError(ex, "Failed to get SunInfo from SunInfoProvider with {@fallbackInfo}", _stateProvider.SunProviderFallbackInfo);
 
             sunInfo = await GetFallbackSunInfo(cancellationToken);
         }

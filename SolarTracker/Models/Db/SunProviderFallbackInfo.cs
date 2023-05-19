@@ -1,8 +1,9 @@
-﻿namespace SolarTracker.Models.Db;
+﻿// ReSharper disable NotAccessedPositionalProperty.Global
+namespace SolarTracker.Models.Db;
 
 public record SunProviderFallbackInfo(
     bool Active,
     DateTime Timestamp,
-    // ReSharper disable once NotAccessedPositionalProperty.Global
+    string OnlineState = "Okay",
     string? Message = null);
 
