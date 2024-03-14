@@ -29,20 +29,17 @@ public static class Bootstrapper
     }
     private static WebApplicationBuilder SetupLogging(this WebApplicationBuilder builder)
     {
-        var sc = builder.Services;
-        Log.Logger = new LoggerConfiguration()
-            .ReadFrom.Configuration(builder.Configuration)
-            .Enrich.FromLogContext()
-            .Enrich.WithThreadId()
-            .Enrich.WithMachineName()
-            .Enrich.WithEnvironmentUserName()
-            .CreateLogger();
+        builder.Host
+            .UseSerilog((ctx, _, loggerConfig) =>
+            {
+                loggerConfig
+                    .ReadFrom.Configuration(ctx.Configuration)
+                    .Enrich.FromLogContext()
+                    .Enrich.WithThreadId()
+                    .Enrich.WithMachineName()
+                    .Enrich.WithEnvironmentUserName();
+            });
 
-        sc.AddLogging(loggingBuilder =>
-        {
-            loggingBuilder.ClearProviders();
-            loggingBuilder.AddSerilog(dispose: true);
-        });
         return builder;
     }
     private static WebApplicationBuilder SetupDatabase(this WebApplicationBuilder builder)
@@ -115,6 +112,8 @@ public static class Bootstrapper
             app.UseSwagger();
             app.UseSwaggerUI();
         }
+
+        app.UseSerilogRequestLogging();
 
         app.UseAuthorization();
         app.MapControllers();
