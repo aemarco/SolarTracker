@@ -1,9 +1,8 @@
-﻿using aemarcoCommons.ToolboxAppOptions;
-// ReSharper disable UnusedAutoPropertyAccessor.Global
+﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
 
 namespace SolarTracker.Configuration;
 
-public class AppSettings : SettingsBase
+public class AppSettings : ISettingsBase
 {
 
     /// <summary>

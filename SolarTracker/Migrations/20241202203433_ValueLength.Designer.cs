@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SolarTracker.Database;
 
@@ -10,9 +11,11 @@ using SolarTracker.Database;
 namespace SolarTracker.Migrations
 {
     [DbContext(typeof(SolarContext))]
-    partial class SolarContextModelSnapshot : ModelSnapshot
+    [Migration("20241202203433_ValueLength")]
+    partial class ValueLength
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.0");

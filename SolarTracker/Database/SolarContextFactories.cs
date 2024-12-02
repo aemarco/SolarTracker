@@ -22,9 +22,6 @@ public class SolarContextFactory
     {
         var context = new SolarContext(_options);
 
-        if (!_checkMigration)
-            return context;
-
         lock (_lock)
         {
             if (!_checkMigration)

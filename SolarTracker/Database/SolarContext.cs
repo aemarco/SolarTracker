@@ -8,8 +8,8 @@ public class SolarContext : DbContext
         : base(options)
     { }
 
-    public DbSet<KeyValueInfo> KeyValueInfos { get; set; } = null!;
-    public DbSet<SunInfo> SunInfos { get; set; } = null!;
+    public DbSet<KeyValueInfo> KeyValueInfos { get; set; }
+    public DbSet<SunInfo> SunInfos { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -22,6 +22,10 @@ public class SolarContext : DbContext
                 .HasColumnType("TEXT")
                 .HasMaxLength(100)
                 .ValueGeneratedNever();
+            e.Property<string>("Value")
+                .IsRequired()
+                .HasColumnType("TEXT")
+                .HasMaxLength(4096);
         });
 
         modelBuilder.Entity<SunInfo>(e =>

@@ -1,9 +1,8 @@
-﻿using aemarcoCommons.ToolboxAppOptions;
-// ReSharper disable UnusedAutoPropertyAccessor.Global
+﻿// ReSharper disable UnusedAutoPropertyAccessor.Global
 
 namespace SolarTracker.Configuration;
 
-public class DeviceSettings : SettingsBase
+public class DeviceSettings : ISettingsBase
 {
     /// <summary>
     /// Gps Latitude of the device

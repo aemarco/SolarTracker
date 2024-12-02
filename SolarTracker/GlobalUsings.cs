@@ -1,5 +1,6 @@
 // Global using directives
 
+global using aemarcoCommons.ToolboxAppOptions;
 global using Microsoft.Extensions.Logging;
 global using SolarTracker;
 global using SolarTracker.Configuration;

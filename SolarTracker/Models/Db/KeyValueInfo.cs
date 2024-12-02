@@ -2,6 +2,6 @@
 
 public class KeyValueInfo
 {
-    public string Key { get; set; } = null!;
-    public string Value { get; set; } = null!;
+    public required string Key { get; init; }
+    public required string Value { get; set; }
 }

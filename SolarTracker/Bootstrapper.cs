@@ -1,5 +1,4 @@
 ﻿using aemarcoCommons.Toolbox;
-using aemarcoCommons.ToolboxAppOptions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -13,8 +12,7 @@ namespace SolarTracker;
 
 public static class Bootstrapper
 {
-    public static WebApplicationBuilder Setup(this WebApplicationBuilder builder) =>
-        builder
+    public static WebApplicationBuilder Setup(this WebApplicationBuilder builder) => builder
             .SetupConfiguration()
             .SetupLogging()
             .SetupDatabase()
@@ -23,23 +21,23 @@ public static class Bootstrapper
 
     private static WebApplicationBuilder SetupConfiguration(this WebApplicationBuilder builder)
     {
-        var sc = builder.Services;
-        sc.AddConfigOptionsUtils(builder.Configuration);
+        builder.Services
+            .AddConfigOptionsUtils(builder.Configuration);
         return builder;
     }
     private static WebApplicationBuilder SetupLogging(this WebApplicationBuilder builder)
     {
-        builder.Host
-            .UseSerilog((ctx, _, loggerConfig) =>
+        builder.Services
+            .AddSerilog((_, loggerConfig) =>
             {
                 loggerConfig
-                    .ReadFrom.Configuration(ctx.Configuration)
+                    .ReadFrom.Configuration(builder.Configuration)
                     .Enrich.FromLogContext()
                     .Enrich.WithThreadId()
                     .Enrich.WithMachineName()
                     .Enrich.WithEnvironmentUserName();
-            });
 
+            });
         return builder;
     }
     private static WebApplicationBuilder SetupDatabase(this WebApplicationBuilder builder)
@@ -105,9 +103,8 @@ public static class Bootstrapper
 
     public static WebApplication ConfigurePipeline(this WebApplication app)
     {
-
-        var enableSwaggerUi = app.Configuration.GetValue<bool>($"{nameof(AppSettings)}:{nameof(AppSettings.EnableSwaggerUi)}");
-        if (enableSwaggerUi)
+        var settings = app.Services.GetRequiredService<AppSettings>();
+        if (settings.EnableSwaggerUi)
         {
             app.UseSwagger();
             app.UseSwaggerUI();

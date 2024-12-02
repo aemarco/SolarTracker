@@ -25,12 +25,15 @@ internal static class SolarContextExtensions
         {
             entry = new KeyValueInfo
             {
-                Key = key
+                Key = key,
+                Value = JsonConvert.SerializeObject(value)
             };
             context.KeyValueInfos.Add(entry);
         }
-
-        entry.Value = JsonConvert.SerializeObject(value);
+        else
+        {
+            entry.Value = JsonConvert.SerializeObject(value);
+        }
         context.SaveChanges();
         return context;
     }
