@@ -78,19 +78,19 @@ public class IpGeolocationClient : ISunInfoProvider
     // ReSharper disable UnusedAutoPropertyAccessor.Local
     private record AstroResponse
     {
-        public AstroLocation Location { get; init; } = null!;
+        public required AstroLocation Location { get; init; }
         [JsonProperty("date")]
-        public string CurrentDate { get; init; } = null!;
+        public required string CurrentDate { get; init; }
         [JsonProperty("current_time")]
-        public string CurrentTime { get; init; } = null!;
-        public string Sunrise { get; init; } = null!;
-        public string Sunset { get; init; } = null!;
+        public required string CurrentTime { get; init; }
+        public required string Sunrise { get; init; }
+        public required string Sunset { get; init; }
         [JsonProperty("sun_status")]
-        public string SunStatus { get; init; } = null!;
+        public required string SunStatus { get; init; }
         [JsonProperty("solar_noon")]
-        public string SolarNoon { get; init; } = null!;
+        public required string SolarNoon { get; init; }
         [JsonProperty("day_length")]
-        public string DayLength { get; init; } = null!;
+        public required string DayLength { get; init; }
         [JsonProperty("sun_altitude")]
         public float Altitude { get; init; }
         [JsonProperty("sun_distance")]
@@ -103,6 +103,4 @@ public class IpGeolocationClient : ISunInfoProvider
 
     // ReSharper restore ClassNeverInstantiated.Local
     // ReSharper restore UnusedAutoPropertyAccessor.Local
-
-
 }
