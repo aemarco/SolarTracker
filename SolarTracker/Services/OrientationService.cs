@@ -1,7 +1,6 @@
-﻿using aemarcoCommons.Extensions.NetworkExtensions;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SolarTracker.Database;
-using System.Linq;
+using System.Net.NetworkInformation;
 
 namespace SolarTracker.Services;
 
@@ -62,8 +61,8 @@ public class OrientationService : IOrientationProvider
         }
         catch (Exception ex)
         {
-
-            var onlineState = (new Uri("google.com").TcpPing()) switch
+            //TODO: change to async once Extensions.NetworkExtensions supports it 
+            var onlineState = IsInternetAccessible() switch
             {
                 true => "Internet Up",
                 false => "Internet Down"
@@ -106,6 +105,21 @@ public class OrientationService : IOrientationProvider
         ctx.SunInfos.Add(sunInfo);
         await ctx.SaveChangesAsync(cancellationToken);
     }
+
+    private static bool IsInternetAccessible()
+    {
+        try
+        {
+            using var ping = new Ping();
+            var reply = ping.Send("8.8.8.8", 3000);
+            return reply.Status == IPStatus.Success;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
 
     private async Task<SunInfo?> GetFallbackSunInfo(CancellationToken cancellationToken)
     {
