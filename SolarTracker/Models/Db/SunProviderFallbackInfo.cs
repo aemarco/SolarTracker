@@ -1,4 +1,5 @@
 ﻿// ReSharper disable NotAccessedPositionalProperty.Global
+
 namespace SolarTracker.Models.Db;
 
 public record SunProviderFallbackInfo(

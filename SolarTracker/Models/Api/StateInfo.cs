@@ -1,6 +1,6 @@
-﻿namespace SolarTracker.Models.Api;
-// ReSharper disable NotAccessedPositionalProperty.Global
-// ReSharper disable UnusedMember.Global
+﻿// ReSharper disable NotAccessedPositionalProperty.Global
+
+namespace SolarTracker.Models.Api;
 
 public record StateInfo(
     StateProvider State,

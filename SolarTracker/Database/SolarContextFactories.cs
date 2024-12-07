@@ -10,7 +10,7 @@ public class SolarContextFactory
 {
     private readonly DbContextOptions<SolarContext> _options;
     private bool _checkMigration = true;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     public SolarContextFactory(
         DbContextOptions<SolarContext> options)

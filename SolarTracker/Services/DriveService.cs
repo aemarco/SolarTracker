@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-
-namespace SolarTracker.Services;
+﻿namespace SolarTracker.Services;
 
 public class DriveService
 {

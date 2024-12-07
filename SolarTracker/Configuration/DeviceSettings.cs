@@ -72,3 +72,42 @@ public class DeviceSettings : ISettingsBase
     public double AltitudeMinAngleForDrive { get; set; }
 
 }
+
+public class DeviceSettingsValidator : AbstractValidator<DeviceSettings>
+{
+    public DeviceSettingsValidator()
+    {
+        RuleFor(x => x.MinAzimuthLimitPin)
+            .GreaterThan(0);
+
+        RuleFor(x => x.AzimuthDriveNegativePin)
+            .GreaterThan(0);
+
+        RuleFor(x => x.MaxAzimuthLimitPin)
+            .GreaterThan(0);
+
+        RuleFor(x => x.AzimuthDrivePositivePin)
+            .GreaterThan(0);
+
+        RuleFor(x => x.AzimuthMinAngleForDrive)
+            .GreaterThan(0);
+
+
+        RuleFor(x => x.MinAltitudeLimitPin)
+            .GreaterThan(0);
+
+        RuleFor(x => x.AltitudeDriveNegativePin)
+            .GreaterThan(0);
+
+        RuleFor(x => x.MaxAltitudeLimitPin)
+            .GreaterThan(0);
+
+        RuleFor(x => x.AltitudeDrivePositivePin)
+            .GreaterThan(0);
+
+        RuleFor(x => x.AltitudeMinAngleForDrive)
+            .GreaterThan(0);
+
+    }
+
+}

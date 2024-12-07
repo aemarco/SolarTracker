@@ -10,10 +10,9 @@ public class AppSettings : ISettingsBase
     /// </summary>
     public bool Auto { get; set; }
     /// <summary>
-    /// Interval, in which the target orientation gets updated
+    /// Interval, in which the target orientation gets updated (min 1min)
     /// </summary>
     public TimeSpan AutoInterval { get; set; }
-
     /// <summary>
     /// So that /swagger is enabled
     /// </summary>
@@ -26,5 +25,15 @@ public class AppSettings : ISettingsBase
     /// So that the system receives a shutdown order at the end of the day
     /// </summary>
     public bool ShutdownAfterSunset { get; set; }
+
+}
+
+public class AppSettingsValidator : AbstractValidator<AppSettings>
+{
+    public AppSettingsValidator()
+    {
+        RuleFor(x => x.AutoInterval)
+            .GreaterThanOrEqualTo(TimeSpan.FromMinutes(1));
+    }
 
 }

@@ -1,6 +1,6 @@
-﻿namespace SolarTracker.Models;
-// ReSharper disable NotAccessedPositionalProperty.Global
-// ReSharper disable UnusedMember.Global
+﻿// ReSharper disable NotAccessedPositionalProperty.Global
+
+namespace SolarTracker.Models;
 
 public record DriveResult(
     DriveDirection Direction,
